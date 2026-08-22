@@ -15,9 +15,9 @@ class LensConnectionIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final (dotColor, label) = switch (snapshot.status) {
       LensConnectionStatus.disconnected => (
-        LensColors.textMuted,
-        'Waiting for app',
-      ),
+          LensColors.textMuted,
+          'Waiting for app',
+        ),
       LensConnectionStatus.connecting => (LensColors.warning, 'Connecting'),
       LensConnectionStatus.connected => (LensColors.success, 'Connected'),
       LensConnectionStatus.error => (LensColors.error, 'Connection error'),
@@ -47,8 +47,8 @@ class LensConnectionIndicator extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: LensColors.textPrimary,
-              ),
+                    color: LensColors.textPrimary,
+                  ),
             ),
           ],
         ),
