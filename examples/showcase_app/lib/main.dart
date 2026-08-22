@@ -52,8 +52,14 @@ class ShowcaseScreen extends StatelessWidget {
         selectedIndex: 0,
         destinations: [
           NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.favorite_border), label: 'Saved'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_border),
+            label: 'Saved',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
+          ),
         ],
       ),
     );
@@ -124,7 +130,10 @@ class _ProductGrid extends StatelessWidget {
         _ProductCard(title: 'Widget Atlas', icon: Icons.widgets_outlined),
         _ProductCard(title: 'Layout Grid', icon: Icons.grid_view_rounded),
         _ProductCard(title: 'Source Map', icon: Icons.code_rounded),
-        _ProductCard(title: 'Runtime Pulse', icon: Icons.monitor_heart_outlined),
+        _ProductCard(
+          title: 'Runtime Pulse',
+          icon: Icons.monitor_heart_outlined,
+        ),
       ],
     );
   }
