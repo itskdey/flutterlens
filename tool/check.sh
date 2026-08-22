@@ -2,14 +2,20 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PACKAGES=(
-  "packages/flutterlens_core"
-  "packages/flutterlens_ui"
-  "packages/flutterlens"
-  "examples/showcase_app"
-)
 
-for package in "${PACKAGES[@]}"; do
+check_dart_package() {
+  local package="$1"
+  echo "==> $package"
+  (
+    cd "$ROOT/$package"
+    dart format --output=none --set-exit-if-changed .
+    dart analyze
+    dart test
+  )
+}
+
+check_flutter_package() {
+  local package="$1"
   echo "==> $package"
   (
     cd "$ROOT/$package"
@@ -17,4 +23,9 @@ for package in "${PACKAGES[@]}"; do
     flutter analyze
     flutter test
   )
-done
+}
+
+check_dart_package "packages/flutterlens_core"
+check_flutter_package "packages/flutterlens_ui"
+check_flutter_package "packages/flutterlens"
+check_flutter_package "examples/showcase_app"
