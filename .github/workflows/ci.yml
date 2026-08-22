@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Core dependencies
+        working-directory: packages/flutterlens_core
+        run: dart pub get
+      - name: UI dependencies
+        working-directory: packages/flutterlens_ui
+        run: flutter pub get
+      - name: Extension dependencies
+        working-directory: packages/flutterlens
+        run: flutter pub get
+      - name: Showcase dependencies
+        working-directory: examples/showcase_app
+        run: flutter pub get
+      - name: Check
+        run: ./tool/check.sh
+      - name: Validate DevTools extension
+        working-directory: packages/flutterlens
+        run: dart run devtools_extensions validate --package=.
