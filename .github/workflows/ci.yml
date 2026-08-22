@@ -27,7 +27,7 @@ jobs:
         working-directory: examples/showcase_app
         run: flutter pub get
       - name: Check
-        run: ./tool/check.sh
+        run: bash ./tool/check.sh
       - name: Validate DevTools extension
         working-directory: packages/flutterlens
         run: dart run devtools_extensions validate --package=.
