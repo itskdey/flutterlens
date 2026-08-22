@@ -8,7 +8,8 @@ check_dart_package() {
   echo "==> $package"
   (
     cd "$ROOT/$package"
-    dart format --output=none --set-exit-if-changed .
+    dart format .
+    git diff -- .
     dart analyze
     dart test
   )
@@ -19,7 +20,8 @@ check_flutter_package() {
   echo "==> $package"
   (
     cd "$ROOT/$package"
-    dart format --output=none --set-exit-if-changed .
+    dart format .
+    git diff -- .
     flutter analyze
     flutter test
   )
