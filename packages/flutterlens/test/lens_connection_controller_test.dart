@@ -1,6 +1,6 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterlens/src/application/lens_connection_controller.dart';
 import 'package:flutterlens_core/flutterlens_core.dart';
-import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('controller forwards source changes', () {
@@ -25,8 +25,7 @@ void main() {
 }
 
 class _FakeConnectionSource implements LensConnectionSource {
-  LensConnectionSnapshot _current =
-      const LensConnectionSnapshot.disconnected();
+  LensConnectionSnapshot _current = const LensConnectionSnapshot.disconnected();
   final List<LensConnectionListener> _listeners = [];
 
   @override
