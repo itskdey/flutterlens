@@ -2,13 +2,18 @@ library;
 
 export 'src/connection/lens_connection_source.dart';
 export 'src/connection/lens_runtime_probe.dart';
+export 'src/inspector/lens_widget_inspector_source.dart';
 export 'src/inspector/lens_widget_tree_source.dart';
 export 'src/logging/lens_logger.dart';
+export 'src/models/lens_box_constraints.dart';
 export 'src/models/lens_build_mode.dart';
 export 'src/models/lens_connection_snapshot.dart';
 export 'src/models/lens_connection_status.dart';
 export 'src/models/lens_error.dart';
+export 'src/models/lens_layout_info.dart';
 export 'src/models/lens_runtime_info.dart';
 export 'src/models/lens_source_location.dart';
 export 'src/models/lens_widget.dart';
+export 'src/models/lens_widget_inspection.dart';
+export 'src/models/lens_widget_property.dart';
 export 'src/models/lens_widget_tree_item.dart';
