@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:flutterlens_ui/flutterlens_ui.dart';
