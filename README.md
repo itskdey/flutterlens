@@ -4,11 +4,11 @@
 
 FlutterLens is an open-source DevTools extension focused on a fast, visual workflow for understanding running Flutter applications.
 
-> **Status:** v0.1 is in active development. Phase 2 proves the live VM Service and Flutter Inspector connection. The live widget tree lands next.
+> **Status:** v0.1 is in active development. FlutterLens can connect through DevTools, inspect runtime metadata, verify Flutter Inspector availability, and retrieve the real live widget tree. Widget properties and layout inspection land next.
 
 ## Preview
 
-Screenshot and demo assets will be added once the live inspector is connected. FlutterLens intentionally does not use fake widget-tree or runtime data for marketing screenshots.
+Screenshot and demo assets will be added once the inspector experience is polished. FlutterLens intentionally does not use fake widget-tree or runtime data for marketing screenshots.
 
 ## Why FlutterLens?
 
@@ -18,27 +18,25 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 
 - Real Flutter DevTools extension entry point
 - DevTools-managed VM Service connection state
-- Live Flutter/Dart runtime metadata
-- Flutter Inspector reachability probe
-- Dart Tooling Daemon connection status
+- Flutter and Dart runtime metadata
+- Flutter Inspector service detection
+- Real live widget tree from the running application
+- Lazy widget child loading with expand/collapse
+- Local tree selection
+- Source location display when supplied by Flutter Inspector
+- Inspector object-group cleanup on refresh and dispose
 - Desktop-first dark application shell
-- Reusable theme tokens and connection indicator
-- Responsive three-panel workspace shell
 - Showcase Flutter app
-- Unit and widget tests
 
-## Planned MVP
+## Roadmap
 
 - [x] DevTools extension bootstrap
 - [x] Connection indicator
-- [x] VM Service connection layer
-- [x] Runtime information
-- [x] Inspector service reachability
-- [x] Developer-tool shell
-- [x] Showcase app
-- [ ] Live widget tree
-- [ ] Widget selection and properties
-- [ ] Source location
+- [x] Runtime and Inspector connection
+- [x] Live widget tree
+- [x] Expand / collapse
+- [x] Widget selection state
+- [ ] Widget properties
 - [ ] Layout information
 - [ ] Widget search
 - [ ] Inspector selection mode
@@ -86,6 +84,14 @@ flutter run
 
 Open DevTools for the running app and enable **FlutterLens** when prompted. The showcase app declares FlutterLens as a development dependency so DevTools can discover the extension.
 
+## Phase 3 Inspector Notes
+
+FlutterLens uses the Flutter Inspector service extensions already exposed by the running debug application. It does not open a second VM Service connection.
+
+The live tree uses a dedicated Inspector object group. Refreshing the tree disposes the previous object group before requesting new diagnostic node IDs, which is important because Inspector IDs can become stale after hot reloads and restarts.
+
+For the current MVP, direct widget-tree queries are disabled while the main isolate is paused at a breakpoint. DevTools itself can fall back to evaluation-based Inspector calls in this case; FlutterLens will add an equivalent fallback only if it can be done cleanly without coupling the UI to DevTools internals.
+
 ## Architecture
 
 ```text
@@ -117,10 +123,10 @@ The UI never owns VM Service calls. DevTools-specific APIs stay in the extension
 Run the repository checks with:
 
 ```bash
-bash ./tool/check.sh
+./tool/check.sh
 ```
 
-CI runs formatting, analysis, tests for every package, and `devtools_extensions validate` for the extension package.
+Or run `dart format .`, `flutter analyze`, and `flutter test` inside each Flutter package.
 
 ## Contributing
 
