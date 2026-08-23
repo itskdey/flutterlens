@@ -6,3 +6,4 @@ export 'src/common/lens_runtime_overview.dart';
 export 'src/shell/lens_shell.dart';
 export 'src/theme/lens_colors.dart';
 export 'src/theme/lens_theme.dart';
+export 'src/tree/lens_widget_tree_view.dart';
