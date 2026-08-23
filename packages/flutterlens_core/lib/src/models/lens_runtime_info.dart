@@ -39,14 +39,14 @@ class LensRuntimeInfo {
 
   @override
   int get hashCode => Object.hash(
-    flutterVersion,
-    dartSdkVersion,
-    operatingSystem,
-    vmName,
-    mainIsolateName,
-    mainIsolateId,
-    buildMode,
-    inspectorAvailable,
-    dtdAvailable,
-  );
+        flutterVersion,
+        dartSdkVersion,
+        operatingSystem,
+        vmName,
+        mainIsolateName,
+        mainIsolateId,
+        buildMode,
+        inspectorAvailable,
+        dtdAvailable,
+      );
 }
