@@ -9,8 +9,8 @@ import 'inspector_diagnostics_mapper.dart';
 class DevToolsWidgetTreeSource implements LensWidgetTreeSource {
   DevToolsWidgetTreeSource({
     InspectorDiagnosticsMapper mapper = const InspectorDiagnosticsMapper(),
-  }) : _mapper = mapper,
-       _groupName = _nextGroupName();
+  })  : _mapper = mapper,
+        _groupName = _nextGroupName();
 
   static const _rootExtension = 'ext.flutter.inspector.getRootWidgetTree';
   static const _childrenExtension =
@@ -104,7 +104,8 @@ class DevToolsWidgetTreeSource implements LensWidgetTreeSource {
       throw StateError('Flutter main isolate is unavailable.');
     }
     if (!await _waitForExtension(extension)) {
-      throw StateError('Flutter Inspector extension $extension is unavailable.');
+      throw StateError(
+          'Flutter Inspector extension $extension is unavailable.');
     }
     return (service: service, isolateId: isolateId);
   }

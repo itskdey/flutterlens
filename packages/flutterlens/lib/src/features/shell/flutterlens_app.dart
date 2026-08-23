@@ -103,7 +103,8 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       return const LensEmptyState(
         icon: Icons.account_tree_outlined,
         title: 'Waiting for Flutter application',
-        description: 'Connect a debug Flutter app to inspect its live widget tree.',
+        description:
+            'Connect a debug Flutter app to inspect its live widget tree.',
       );
     }
     final rows = _tree.visibleNodes;
