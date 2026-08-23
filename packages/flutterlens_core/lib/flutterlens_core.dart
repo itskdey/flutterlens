@@ -1,6 +1,7 @@
 library;
 
 export 'src/connection/lens_connection_source.dart';
+export 'src/connection/lens_runtime_probe.dart';
 export 'src/inspector/lens_widget_tree_source.dart';
 export 'src/logging/lens_logger.dart';
 export 'src/models/lens_build_mode.dart';
@@ -11,4 +12,3 @@ export 'src/models/lens_runtime_info.dart';
 export 'src/models/lens_source_location.dart';
 export 'src/models/lens_widget.dart';
 export 'src/models/lens_widget_tree_item.dart';
-export 'src/runtime/lens_runtime_probe.dart';
