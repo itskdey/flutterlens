@@ -116,3 +116,39 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     );
   }
 }
+
+class _Panel extends StatelessWidget {
+  const _Panel({required this.eyebrow, required this.child});
+
+  final String eyebrow;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 38,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                eyebrow,
+                style: const TextStyle(
+                  color: LensColors.textMuted,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.9,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
