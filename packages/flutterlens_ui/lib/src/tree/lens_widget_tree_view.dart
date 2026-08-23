@@ -52,7 +52,7 @@ class _TreeRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final widget = item.widget;
     final source = widget.sourceLocation;
-    final sourceName = source == null ? null : source.file.split('/').last;
+    final sourceName = source?.file.split('/').last;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -136,12 +136,12 @@ class _TreeRow extends StatelessWidget {
                       color: LensColors.error,
                     ),
                   ),
-                if (sourceName != null) ...[
+                if (source != null) ...[
                   const SizedBox(width: 6),
                   Tooltip(
                     message: source.display,
                     child: Text(
-                      sourceName,
+                      sourceName!,
                       style: const TextStyle(
                         color: LensColors.textMuted,
                         fontSize: 9,
