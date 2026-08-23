@@ -25,24 +25,31 @@ class DevToolsRuntimeProbe implements LensRuntimeProbe {
 
     final isFlutterApp = connectedApp.isFlutterAppNow ?? false;
     final mainIsolate = serviceManager.isolateManager.mainIsolate.value;
-    final inspectorAvailable = isFlutterApp
-        ? await _probeInspector(service, mainIsolate)
-        : false;
+
+    var inspectorAvailable = false;
+    if (isFlutterApp) {
+      inspectorAvailable = await _probeInspector(service, mainIsolate);
+    }
+
     final vm = serviceManager.vm ?? await service.getVM();
-    final buildMode = !isFlutterApp
-        ? LensBuildMode.unknown
-        : connectedApp.isProfileBuildNow == true
-        ? LensBuildMode.profile
-        : LensBuildMode.debug;
+    final buildMode = _resolveBuildMode(
+      isFlutterApp: isFlutterApp,
+      isProfileBuild: connectedApp.isProfileBuildNow == true,
+    );
+
+    String? flutterVersion;
+    if (isFlutterApp) {
+      flutterVersion = connectedApp.flutterVersionNow?.version;
+    }
+
+    final operatingSystem = connectedApp.operatingSystem == 'unknown_OS'
+        ? null
+        : connectedApp.operatingSystem;
 
     return LensRuntimeInfo(
-      flutterVersion: isFlutterApp
-          ? connectedApp.flutterVersionNow?.version
-          : null,
+      flutterVersion: flutterVersion,
       dartSdkVersion: serviceManager.sdkVersion ?? vm.version,
-      operatingSystem: connectedApp.operatingSystem == 'unknown_OS'
-          ? null
-          : connectedApp.operatingSystem,
+      operatingSystem: operatingSystem,
       vmName: vm.name,
       mainIsolateName: mainIsolate?.name,
       mainIsolateId: mainIsolate?.id,
@@ -50,6 +57,15 @@ class DevToolsRuntimeProbe implements LensRuntimeProbe {
       inspectorAvailable: inspectorAvailable,
       dtdAvailable: dtdManager.hasConnection,
     );
+  }
+
+  LensBuildMode _resolveBuildMode({
+    required bool isFlutterApp,
+    required bool isProfileBuild,
+  }) {
+    if (!isFlutterApp) return LensBuildMode.unknown;
+    if (isProfileBuild) return LensBuildMode.profile;
+    return LensBuildMode.debug;
   }
 
   Future<bool> _probeInspector(
