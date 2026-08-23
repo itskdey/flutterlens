@@ -104,9 +104,8 @@ class _TreeRow extends StatelessWidget {
                                 ? LensColors.textPrimary
                                 : LensColors.textSecondary,
                             fontSize: 11,
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.w500,
                           ),
                         ),
                       ),
