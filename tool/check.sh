@@ -8,7 +8,7 @@ check_dart_package() {
   echo "==> $package"
   (
     cd "$ROOT/$package"
-    dart format --output=none --set-exit-if-changed .
+    dart format .
     dart analyze
     dart test
   )
@@ -19,7 +19,7 @@ check_flutter_package() {
   echo "==> $package"
   (
     cd "$ROOT/$package"
-    dart format --output=none --set-exit-if-changed .
+    dart format .
     flutter analyze
     flutter test
   )
@@ -29,3 +29,7 @@ check_dart_package "packages/flutterlens_core"
 check_flutter_package "packages/flutterlens_ui"
 check_flutter_package "packages/flutterlens"
 check_flutter_package "examples/showcase_app"
+
+# Diagnostic Phase 3 run: print the formatter's exact changes after all
+# analyzers and tests have executed. Restore the strict format gate next.
+git -C "$ROOT" diff --exit-code
