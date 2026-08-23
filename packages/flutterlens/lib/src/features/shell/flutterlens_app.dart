@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:flutterlens_ui/flutterlens_ui.dart';
 
 import '../../application/lens_connection_controller.dart';
 import '../../devtools/devtools_connection_source.dart';
+import '../../devtools/devtools_runtime_probe.dart';
 
 class FlutterLensApp extends StatefulWidget {
   const FlutterLensApp({super.key});
@@ -17,7 +19,10 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   @override
   void initState() {
     super.initState();
-    _connection = LensConnectionController(DevToolsConnectionSource());
+    _connection = LensConnectionController(
+      DevToolsConnectionSource(),
+      DevToolsRuntimeProbe(),
+    );
   }
 
   @override
@@ -36,37 +41,36 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
         listenable: _connection,
         builder: (context, _) {
           final snapshot = _connection.snapshot;
+          final runtimeInfo = _connection.runtimeInfo;
           return LensShell(
             connection: LensConnectionIndicator(snapshot: snapshot),
+            onRefresh: snapshot.isConnected ? _connection.refreshRuntime : null,
+            refreshing: _connection.isLoadingRuntime,
             treePanel: const _Panel(
               eyebrow: 'WIDGET TREE',
               child: LensEmptyState(
                 icon: Icons.account_tree_outlined,
-                title: 'Widget tree arrives next',
+                title: 'Live tree is Phase 3',
                 description:
-                    'Phase 1 proves the DevTools connection before querying Flutter Inspector APIs.',
+                    'Phase 2 verifies the VM Service and Flutter Inspector before requesting diagnostic nodes.',
               ),
             ),
             centerPanel: _Panel(
-              eyebrow: 'SELECTION',
-              child: LensEmptyState(
-                icon: snapshot.isConnected
-                    ? Icons.check_circle_outline_rounded
-                    : Icons.link_off_rounded,
-                title: snapshot.isConnected
-                    ? 'Runtime connection ready'
-                    : 'Waiting for Flutter application',
-                description: snapshot.message ??
-                    'Run a Flutter app in debug mode and open FlutterLens from DevTools.',
-              ),
+              eyebrow: 'RUNTIME',
+              child: _buildRuntimePanel(snapshot, runtimeInfo),
             ),
-            inspectorPanel: const _Panel(
+            inspectorPanel: _Panel(
               eyebrow: 'INSPECTOR',
               child: LensEmptyState(
-                icon: Icons.tune_rounded,
-                title: 'Nothing selected',
-                description:
-                    'Select a runtime widget after the live inspector adapter is added in Phase 2.',
+                icon: runtimeInfo?.inspectorAvailable == true
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.tune_rounded,
+                title: runtimeInfo?.inspectorAvailable == true
+                    ? 'Inspector service reachable'
+                    : 'Nothing selected',
+                description: runtimeInfo?.inspectorAvailable == true
+                    ? 'FlutterLens can call the live Flutter Inspector. Widget queries begin in Phase 3.'
+                    : 'Connect a debug Flutter application to verify Inspector availability.',
               ),
             ),
           );
@@ -74,40 +78,41 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       ),
     );
   }
-}
 
-class _Panel extends StatelessWidget {
-  const _Panel({required this.eyebrow, required this.child});
-
-  final String eyebrow;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 38,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                eyebrow,
-                style: const TextStyle(
-                  color: LensColors.textMuted,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.9,
-                ),
-              ),
-            ),
-          ),
+  Widget _buildRuntimePanel(
+    LensConnectionSnapshot snapshot,
+    LensRuntimeInfo? runtimeInfo,
+  ) {
+    if (!snapshot.isConnected) {
+      return LensEmptyState(
+        icon: Icons.link_off_rounded,
+        title: 'Waiting for Flutter application',
+        description: snapshot.message ??
+            'Run a Flutter app in debug mode and open FlutterLens from DevTools.',
+      );
+    }
+    if (_connection.isLoadingRuntime && runtimeInfo == null) {
+      return const Center(
+        child: SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator(strokeWidth: 1.5),
         ),
-        const Divider(height: 1),
-        Expanded(child: child),
-      ],
+      );
+    }
+    if (_connection.runtimeError case final error?) {
+      return LensEmptyState(
+        icon: Icons.error_outline_rounded,
+        title: 'Runtime probe failed',
+        description: error.message,
+      );
+    }
+    if (runtimeInfo != null) {
+      return LensRuntimeOverview(info: runtimeInfo);
+    }
+    return const LensEmptyState(
+      icon: Icons.hourglass_empty_rounded,
+      title: 'Runtime information pending',
+      description: 'Refresh to query the connected VM Service again.',
     );
   }
 }
