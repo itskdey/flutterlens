@@ -37,4 +37,56 @@ void main() {
 
     expect(widget?.hasChildren, isFalse);
   });
+
+  test('maps diagnostic properties', () {
+    final properties = mapper.propertiesFromJson([
+      {
+        'name': 'color',
+        'description': 'Color(0xff54a8ff)',
+        'propertyType': 'Color',
+        'level': 'info',
+        'tooltip': 'foreground color',
+      },
+      {
+        'name': 'enabled',
+        'description': 'true',
+        'propertyType': 'bool',
+        'level': 'fine',
+      },
+    ]);
+
+    expect(properties, hasLength(2));
+    expect(properties.first.name, 'color');
+    expect(properties.first.type, 'Color');
+    expect(properties.first.tooltip, 'foreground color');
+    expect(properties.last.isDefault, isTrue);
+  });
+
+  test('maps layout explorer diagnostics', () {
+    final layout = mapper.layoutFromJson({
+      'widgetRuntimeType': 'Row',
+      'size': {'width': '320.0', 'height': '56.0'},
+      'constraints': {
+        'minWidth': '0.0',
+        'maxWidth': 'Infinity',
+        'minHeight': '56.0',
+        'maxHeight': '56.0',
+      },
+      'parentData': {'offsetX': '12.0', 'offsetY': '8.0'},
+      'renderObject': {'description': 'RenderFlex#abc'},
+      'flexFactor': 2,
+      'flexFit': 'tight',
+    });
+
+    expect(layout, isNotNull);
+    expect(layout!.width, 320);
+    expect(layout.height, 56);
+    expect(layout.constraints?.maxWidth, double.infinity);
+    expect(layout.offsetX, 12);
+    expect(layout.offsetY, 8);
+    expect(layout.renderObject, 'RenderFlex#abc');
+    expect(layout.flexFactor, 2);
+    expect(layout.flexFit, 'tight');
+    expect(layout.isFlex, isTrue);
+  });
 }
