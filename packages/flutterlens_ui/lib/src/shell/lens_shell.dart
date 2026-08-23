@@ -8,6 +8,8 @@ class LensShell extends StatelessWidget {
     required this.treePanel,
     required this.centerPanel,
     required this.inspectorPanel,
+    this.onRefresh,
+    this.refreshing = false,
     super.key,
   });
 
@@ -15,13 +17,19 @@ class LensShell extends StatelessWidget {
   final Widget treePanel;
   final Widget centerPanel;
   final Widget inspectorPanel;
+  final VoidCallback? onRefresh;
+  final bool refreshing;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          _Toolbar(connection: connection),
+          _Toolbar(
+            connection: connection,
+            onRefresh: onRefresh,
+            refreshing: refreshing,
+          ),
           const Divider(height: 1),
           Expanded(
             child: LayoutBuilder(
@@ -56,9 +64,15 @@ class LensShell extends StatelessWidget {
 }
 
 class _Toolbar extends StatelessWidget {
-  const _Toolbar({required this.connection});
+  const _Toolbar({
+    required this.connection,
+    required this.onRefresh,
+    required this.refreshing,
+  });
 
   final Widget connection;
+  final VoidCallback? onRefresh;
+  final bool refreshing;
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +109,14 @@ class _Toolbar extends StatelessWidget {
             connection,
             const SizedBox(width: 8),
             IconButton(
-              onPressed: null,
-              tooltip: 'Refresh is enabled with the inspector in Phase 2',
-              icon: const Icon(Icons.refresh_rounded, size: 18),
+              onPressed: refreshing ? null : onRefresh,
+              tooltip: 'Refresh runtime information',
+              icon: refreshing
+                  ? const SizedBox.square(
+                      dimension: 14,
+                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 18),
             ),
             IconButton(
               onPressed: null,
@@ -129,7 +148,7 @@ class _StatusBar extends StatelessWidget {
             SizedBox(width: 18),
             Text(
               'Runtime',
-              style: TextStyle(color: LensColors.textMuted, fontSize: 10),
+              style: TextStyle(color: LensColors.textSecondary, fontSize: 10),
             ),
             SizedBox(width: 18),
             Text(

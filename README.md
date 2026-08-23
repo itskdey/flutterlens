@@ -4,7 +4,7 @@
 
 FlutterLens is an open-source DevTools extension focused on a fast, visual workflow for understanding running Flutter applications.
 
-> **Status:** v0.1 is in active development. Phase 1 contains the DevTools extension shell, connection state, design system, and showcase app. Live widget inspection lands next.
+> **Status:** v0.1 is in active development. Phase 2 proves the live VM Service and Flutter Inspector connection. The live widget tree lands next.
 
 ## Preview
 
@@ -14,21 +14,26 @@ Screenshot and demo assets will be added once the live inspector is connected. F
 
 Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspired workflow for inspecting widgets, source locations, layout information, rebuilds, and eventually reviewed AI-generated source patches.
 
-## Phase 1
+## Current Features
 
 - Real Flutter DevTools extension entry point
 - DevTools-managed VM Service connection state
-- FlutterLens connection abstraction
+- Live Flutter/Dart runtime metadata
+- Flutter Inspector reachability probe
+- Dart Tooling Daemon connection status
 - Desktop-first dark application shell
 - Reusable theme tokens and connection indicator
 - Responsive three-panel workspace shell
 - Showcase Flutter app
-- Unit and widget tests for Phase 1 state/UI
+- Unit and widget tests
 
 ## Planned MVP
 
 - [x] DevTools extension bootstrap
 - [x] Connection indicator
+- [x] VM Service connection layer
+- [x] Runtime information
+- [x] Inspector service reachability
 - [x] Developer-tool shell
 - [x] Showcase app
 - [ ] Live widget tree
@@ -58,7 +63,7 @@ The minimum versions follow the current `devtools_extensions` package requiremen
 Fetch dependencies for each package:
 
 ```bash
-cd packages/flutterlens_core && flutter pub get
+cd packages/flutterlens_core && dart pub get
 cd ../flutterlens_ui && flutter pub get
 cd ../flutterlens && flutter pub get
 cd ../../examples/showcase_app && flutter pub get
@@ -76,7 +81,7 @@ Run the showcase app:
 
 ```bash
 cd examples/showcase_app
-flutter run -d chrome
+flutter run
 ```
 
 Open DevTools for the running app and enable **FlutterLens** when prompted. The showcase app declares FlutterLens as a development dependency so DevTools can discover the extension.
@@ -112,10 +117,10 @@ The UI never owns VM Service calls. DevTools-specific APIs stay in the extension
 Run the repository checks with:
 
 ```bash
-./tool/check.sh
+bash ./tool/check.sh
 ```
 
-Or run `dart format .`, `flutter analyze`, and `flutter test` inside each Flutter package.
+CI runs formatting, analysis, tests for every package, and `devtools_extensions validate` for the extension package.
 
 ## Contributing
 
