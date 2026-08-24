@@ -5,9 +5,11 @@ import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:flutterlens_ui/flutterlens_ui.dart';
 
 import '../../application/lens_connection_controller.dart';
+import '../../application/lens_widget_inspector_controller.dart';
 import '../../application/lens_widget_tree_controller.dart';
 import '../../devtools/devtools_connection_source.dart';
 import '../../devtools/devtools_runtime_probe.dart';
+import '../../devtools/devtools_widget_inspector_source.dart';
 import '../../devtools/devtools_widget_tree_source.dart';
 
 class FlutterLensApp extends StatefulWidget {
@@ -20,6 +22,7 @@ class FlutterLensApp extends StatefulWidget {
 class _FlutterLensAppState extends State<FlutterLensApp> {
   late final LensConnectionController _connection;
   late final LensWidgetTreeController _tree;
+  late final LensWidgetInspectorController _inspector;
   late final Listenable _workspace;
   late bool _wasConnected;
 
@@ -31,7 +34,10 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       DevToolsRuntimeProbe(),
     );
     _tree = LensWidgetTreeController(DevToolsWidgetTreeSource());
-    _workspace = Listenable.merge([_connection, _tree]);
+    _inspector = LensWidgetInspectorController(
+      DevToolsWidgetInspectorSource(),
+    );
+    _workspace = Listenable.merge([_connection, _tree, _inspector]);
     _wasConnected = _connection.snapshot.isConnected;
     _connection.addListener(_handleConnectionChanged);
     if (_wasConnected) {
@@ -42,6 +48,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   @override
   void dispose() {
     _connection.removeListener(_handleConnectionChanged);
+    _inspector.dispose();
     _tree.dispose();
     _connection.dispose();
     super.dispose();
@@ -61,7 +68,9 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
           return LensShell(
             connection: LensConnectionIndicator(snapshot: snapshot),
             onRefresh: snapshot.isConnected ? _refreshAll : null,
-            refreshing: _connection.isLoadingRuntime || _tree.isLoading,
+            refreshing: _connection.isLoadingRuntime ||
+                _tree.isLoading ||
+                _inspector.isLoading,
             treePanel: _Panel(
               eyebrow: 'WIDGET TREE',
               child: _buildTreePanel(snapshot),
@@ -72,7 +81,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
             ),
             inspectorPanel: _Panel(
               eyebrow: 'INSPECTOR',
-              child: _buildSelectionPanel(runtimeInfo),
+              child: _buildInspectorPanel(runtimeInfo),
             ),
           );
         },
@@ -81,6 +90,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   }
 
   Future<void> _refreshAll() async {
+    _inspector.clear();
     await Future.wait([
       _connection.refreshRuntime(),
       _tree.refresh(),
@@ -94,8 +104,14 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     if (connected) {
       unawaited(_tree.refresh());
     } else {
+      _inspector.clear();
       _tree.clear();
     }
+  }
+
+  void _selectWidget(LensWidget widget) {
+    _tree.selectWidget(widget);
+    unawaited(_inspector.inspect(widget));
   }
 
   Widget _buildTreePanel(LensConnectionSnapshot snapshot) {
@@ -135,7 +151,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       nodes: rows,
       selectedId: _tree.selectedWidget?.id,
       onToggle: _tree.toggleNode,
-      onSelect: _tree.selectWidget,
+      onSelect: _selectWidget,
     );
   }
 
@@ -176,75 +192,48 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     );
   }
 
-  Widget _buildSelectionPanel(LensRuntimeInfo? runtimeInfo) {
+  Widget _buildInspectorPanel(LensRuntimeInfo? runtimeInfo) {
     final selected = _tree.selectedWidget;
-    if (selected != null) {
-      return _SelectedWidgetSummary(widget: selected);
+    if (selected == null) {
+      return LensEmptyState(
+        icon: runtimeInfo?.inspectorAvailable == true
+            ? Icons.touch_app_outlined
+            : Icons.tune_rounded,
+        title: runtimeInfo?.inspectorAvailable == true
+            ? 'Select a widget'
+            : 'Inspector unavailable',
+        description: runtimeInfo?.inspectorAvailable == true
+            ? 'Choose a node to inspect its layout, source, and diagnostic properties.'
+            : 'Connect a debug Flutter application with the Inspector service available.',
+      );
     }
-    return LensEmptyState(
-      icon: runtimeInfo?.inspectorAvailable == true
-          ? Icons.touch_app_outlined
-          : Icons.tune_rounded,
-      title: runtimeInfo?.inspectorAvailable == true
-          ? 'Select a widget'
-          : 'Inspector unavailable',
-      description: runtimeInfo?.inspectorAvailable == true
-          ? 'Choose any node in the live tree. Properties and layout arrive in Phase 4.'
-          : 'Connect a debug Flutter application with the Inspector service available.',
-    );
-  }
-}
 
-class _SelectedWidgetSummary extends StatelessWidget {
-  const _SelectedWidgetSummary({required this.widget});
-
-  final LensWidget widget;
-
-  @override
-  Widget build(BuildContext context) {
-    final source = widget.sourceLocation;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(
-          widget.name,
-          style: const TextStyle(
-            color: LensColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+    if (_inspector.isLoading) {
+      return const Center(
+        child: SizedBox.square(
+          dimension: 20,
+          child: CircularProgressIndicator(strokeWidth: 1.5),
         ),
-        if (widget.description case final description?) ...[
-          const SizedBox(height: 6),
-          Text(
-            description,
-            style: const TextStyle(
-              color: LensColors.textSecondary,
-              fontSize: 11,
-            ),
-          ),
-        ],
-        if (source != null) ...[
-          const SizedBox(height: 18),
-          const Text(
-            'SOURCE',
-            style: TextStyle(
-              color: LensColors.textMuted,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
-          ),
-          const SizedBox(height: 6),
-          SelectableText(
-            source.display,
-            style: const TextStyle(
-              color: LensColors.accent,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ],
+      );
+    }
+    if (_inspector.error case final error?) {
+      return LensEmptyState(
+        icon: Icons.error_outline_rounded,
+        title: 'Could not inspect widget',
+        description: error.message,
+      );
+    }
+    final inspection = _inspector.inspection;
+    if (inspection != null && inspection.widgetId == selected.id) {
+      return LensWidgetInspectorView(
+        widget: selected,
+        inspection: inspection,
+      );
+    }
+    return const LensEmptyState(
+      icon: Icons.hourglass_empty_rounded,
+      title: 'Inspector data pending',
+      description: 'Select the widget again to query live Inspector data.',
     );
   }
 }
