@@ -155,7 +155,8 @@ class DevToolsWidgetTreeSource extends LensWidgetTreeSource {
     );
     final uri = _fileUri(source.file);
     if (uri == null) {
-      throw StateError('FlutterLens cannot open non-local source ${source.file}.');
+      throw StateError(
+          'FlutterLens cannot open non-local source ${source.file}.');
     }
 
     try {
