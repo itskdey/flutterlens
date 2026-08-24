@@ -25,6 +25,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   late final LensWidgetInspectorController _inspector;
   late final Listenable _workspace;
   late bool _wasConnected;
+  String? _lastInspectedSelectionId;
 
   @override
   void initState() {
@@ -40,6 +41,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     _workspace = Listenable.merge([_connection, _tree, _inspector]);
     _wasConnected = _connection.snapshot.isConnected;
     _connection.addListener(_handleConnectionChanged);
+    _tree.addListener(_handleTreeChanged);
     if (_wasConnected) {
       unawaited(_tree.refresh());
     }
@@ -48,6 +50,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   @override
   void dispose() {
     _connection.removeListener(_handleConnectionChanged);
+    _tree.removeListener(_handleTreeChanged);
     _inspector.dispose();
     _tree.dispose();
     _connection.dispose();
@@ -91,6 +94,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
 
   Future<void> _refreshAll() async {
     _inspector.clear();
+    _lastInspectedSelectionId = null;
     await Future.wait([
       _connection.refreshRuntime(),
       _tree.refresh(),
@@ -104,14 +108,26 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     if (connected) {
       unawaited(_tree.refresh());
     } else {
+      _lastInspectedSelectionId = null;
       _inspector.clear();
       _tree.clear();
     }
   }
 
+  void _handleTreeChanged() {
+    final selected = _tree.selectedWidget;
+    final selectedId = selected?.id;
+    if (selectedId == _lastInspectedSelectionId) return;
+    _lastInspectedSelectionId = selectedId;
+    if (selected == null) {
+      _inspector.clear();
+      return;
+    }
+    unawaited(_inspector.inspect(selected));
+  }
+
   void _selectWidget(LensWidget widget) {
     _tree.selectWidget(widget);
-    unawaited(_inspector.inspect(widget));
   }
 
   Widget _buildTreePanel(LensConnectionSnapshot snapshot) {
@@ -124,7 +140,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       );
     }
     final rows = _tree.visibleNodes;
-    if (_tree.isLoading && rows.isEmpty) {
+    if (_tree.isLoading && !_tree.hasTree) {
       return const Center(
         child: SizedBox.square(
           dimension: 20,
@@ -139,7 +155,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
         description: error.message,
       );
     }
-    if (rows.isEmpty) {
+    if (!_tree.hasTree) {
       return const LensEmptyState(
         icon: Icons.hourglass_empty_rounded,
         title: 'Widget tree is not ready',
@@ -147,11 +163,27 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
             'Render a Flutter frame, then refresh FlutterLens to query the Inspector again.',
       );
     }
-    return LensWidgetTreeView(
-      nodes: rows,
-      selectedId: _tree.selectedWidget?.id,
-      onToggle: _tree.toggleNode,
-      onSelect: _selectWidget,
+
+    return Column(
+      children: [
+        _TreeTools(tree: _tree),
+        const Divider(height: 1),
+        Expanded(
+          child: rows.isEmpty && _tree.searchQuery.isNotEmpty
+              ? const LensEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'No matching widgets',
+                  description:
+                      'Try a widget type, description, or source filename.',
+                )
+              : LensWidgetTreeView(
+                  nodes: rows,
+                  selectedId: _tree.selectedWidget?.id,
+                  onToggle: _tree.toggleNode,
+                  onSelect: _selectWidget,
+                ),
+        ),
+      ],
     );
   }
 
@@ -203,7 +235,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
             ? 'Select a widget'
             : 'Inspector unavailable',
         description: runtimeInfo?.inspectorAvailable == true
-            ? 'Choose a node to inspect its layout, source, and diagnostic properties.'
+            ? 'Choose a node or use Select Widget Mode to inspect live layout, source, and properties.'
             : 'Connect a debug Flutter application with the Inspector service available.',
       );
     }
@@ -228,12 +260,151 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       return LensWidgetInspectorView(
         widget: selected,
         inspection: inspection,
+        onOpenSource: selected.sourceLocation == null
+            ? null
+            : () => unawaited(_tree.navigateToSource(selected)),
       );
     }
     return const LensEmptyState(
       icon: Icons.hourglass_empty_rounded,
       title: 'Inspector data pending',
-      description: 'Select the widget again to query live Inspector data.',
+      description: 'FlutterLens is querying live Inspector data.',
+    );
+  }
+}
+
+class _TreeTools extends StatelessWidget {
+  const _TreeTools({required this.tree});
+
+  final LensWidgetTreeController tree;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 7, 6, 7),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 32,
+            child: TextField(
+              onChanged: (value) => unawaited(tree.setSearchQuery(value)),
+              style: const TextStyle(
+                color: LensColors.textPrimary,
+                fontSize: 11,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search widgets…',
+                hintStyle: const TextStyle(
+                  color: LensColors.textMuted,
+                  fontSize: 11,
+                ),
+                prefixIcon: const Icon(Icons.search_rounded, size: 15),
+                prefixIconConstraints: const BoxConstraints(minWidth: 34),
+                suffixIcon: tree.isExpandingAll
+                    ? const Padding(
+                        padding: EdgeInsets.all(9),
+                        child: CircularProgressIndicator(strokeWidth: 1.2),
+                      )
+                    : null,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                filled: true,
+                fillColor: LensColors.panelRaised,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: const BorderSide(color: LensColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: const BorderSide(color: LensColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: const BorderSide(color: LensColors.accent),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              _ToolButton(
+                tooltip: tree.selectModeEnabled
+                    ? 'Disable Select Widget Mode'
+                    : 'Select a widget from the running app',
+                active: tree.selectModeEnabled,
+                icon: Icons.ads_click_rounded,
+                onPressed: tree.toggleSelectMode,
+              ),
+              _ToolButton(
+                tooltip: tree.showImplementationWidgets
+                    ? 'Hide implementation widgets'
+                    : 'Show framework and implementation widgets',
+                active: tree.showImplementationWidgets,
+                icon: Icons.code_rounded,
+                onPressed: () => unawaited(
+                  tree.setShowImplementationWidgets(
+                    !tree.showImplementationWidgets,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(width: 1, height: 16, color: LensColors.border),
+              const SizedBox(width: 4),
+              _ToolButton(
+                tooltip: 'Expand all loaded widgets',
+                icon: Icons.unfold_more_rounded,
+                onPressed: tree.isExpandingAll ? null : tree.expandAll,
+              ),
+              _ToolButton(
+                tooltip: 'Collapse all widgets',
+                icon: Icons.unfold_less_rounded,
+                onPressed: tree.collapseAll,
+              ),
+              const Spacer(),
+              const Tooltip(
+                message: 'Keyboard: ↑ ↓ navigate · ← → collapse/expand',
+                child: Icon(
+                  Icons.keyboard_alt_outlined,
+                  size: 15,
+                  color: LensColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.active = false,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        visualDensity: VisualDensity.compact,
+        constraints: const BoxConstraints.tightFor(width: 30, height: 28),
+        padding: EdgeInsets.zero,
+        onPressed: onPressed,
+        icon: Icon(
+          icon,
+          size: 15,
+          color: active ? LensColors.accent : LensColors.textSecondary,
+        ),
+      ),
     );
   }
 }

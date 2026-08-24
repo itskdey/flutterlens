@@ -7,11 +7,13 @@ class LensWidgetInspectorView extends StatelessWidget {
   const LensWidgetInspectorView({
     required this.widget,
     required this.inspection,
+    this.onOpenSource,
     super.key,
   });
 
   final LensWidget widget;
   final LensWidgetInspection inspection;
+  final VoidCallback? onOpenSource;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +51,7 @@ class LensWidgetInspectorView extends StatelessWidget {
         if (source != null) ...[
           const _SectionTitle('SOURCE'),
           const SizedBox(height: 7),
-          _SourceCard(source: source),
+          _SourceCard(source: source, onOpenSource: onOpenSource),
           const SizedBox(height: 18),
         ],
         const _SectionTitle('PROPERTIES'),
@@ -114,9 +116,10 @@ class _LayoutCard extends StatelessWidget {
 }
 
 class _SourceCard extends StatelessWidget {
-  const _SourceCard({required this.source});
+  const _SourceCard({required this.source, required this.onOpenSource});
 
   final LensSourceLocation source;
+  final VoidCallback? onOpenSource;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +131,24 @@ class _SourceCard extends StatelessWidget {
             _DataRow(label: 'Line', value: '${source.line}'),
           if (source.column != null)
             _DataRow(label: 'Column', value: '${source.column}'),
+          if (onOpenSource != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onOpenSource,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                icon: const Icon(Icons.open_in_new_rounded, size: 13),
+                label: const Text(
+                  'Open Source',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

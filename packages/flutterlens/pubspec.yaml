@@ -11,6 +11,7 @@ flutter:
   uses-material-design: true
 
 dependencies:
+  dds_service_extensions: ^2.1.0
   devtools_app_shared: ^0.5.1
   devtools_extensions: ^0.5.1
   flutter:
