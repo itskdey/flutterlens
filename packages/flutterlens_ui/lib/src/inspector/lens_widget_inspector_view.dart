@@ -77,7 +77,7 @@ class _LayoutCard extends StatelessWidget {
           if (layout.hasSize)
             _DataRow(
               label: 'Size',
-              value: '${_number(layout.width)} × ${_number(layout.height)}',
+              value: '${_number(layout.width!)} × ${_number(layout.height!)}',
             ),
           if (constraints != null)
             _DataRow(
