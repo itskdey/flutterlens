@@ -57,7 +57,7 @@ class InspectorDiagnosticsMapper {
       properties.add(
         LensWidgetProperty(
           name: name ?? _string(json['propertyType']) ?? 'value',
-          value: exception == null ? description ?? 'null' : exception,
+          value: exception ?? description ?? 'null',
           type: _string(json['propertyType']) ?? _string(json['type']),
           level: _string(json['level']),
           tooltip: _string(json['tooltip']),
