@@ -4,7 +4,7 @@
 
 FlutterLens is an open-source DevTools extension focused on a fast, visual workflow for understanding running Flutter applications.
 
-> **Status:** v0.1 is in active development. FlutterLens can connect through DevTools, inspect runtime metadata, retrieve the real live widget tree, and inspect selected-widget properties, source locations, and layout information from the running app.
+> **Status:** v0.1 is in active development. FlutterLens can connect through DevTools, inspect runtime metadata, retrieve and search the real live widget tree, synchronize selection with the running app, and inspect selected-widget properties, source locations, and layout information.
 
 ## Preview
 
@@ -21,12 +21,18 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - Flutter and Dart runtime metadata
 - Flutter Inspector service detection
 - Real live widget tree from the running application
-- Lazy widget child loading with expand/collapse
-- Local tree selection
+- Lazy widget child loading with expand/collapse and expand-all controls
+- Widget search across type, description, and source filename
+- Summary-tree / implementation-widget filtering using the real Flutter Inspector APIs
+- Keyboard tree navigation with arrow keys
+- Selection preservation across tree refreshes when widget identity can be matched
+- Bidirectional selection synchronization between FlutterLens and the running app
+- Select Widget Mode using the current Flutter Inspector service extension with a legacy fallback
 - Selected-widget diagnostic properties
 - Real layout size and box constraints when exposed by Flutter Inspector
 - Parent-data offset, flex factor/fit, and render-object summary when available
 - Source file, line, and column when supplied by Flutter Inspector
+- Open Source action through the VM Service tool-event navigation channel when an IDE is listening
 - Inspector object-group cleanup on refresh, selection changes, and dispose
 - Desktop-first dark application shell
 - Showcase Flutter app
@@ -41,8 +47,12 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - [x] Widget selection state
 - [x] Widget properties
 - [x] Layout information
-- [ ] Widget search
-- [ ] Inspector selection mode
+- [x] Widget search
+- [x] Implementation-widget filtering
+- [x] Keyboard tree navigation
+- [x] Inspector selection mode
+- [x] Bidirectional selection synchronization
+- [x] Source navigation
 - [ ] Rebuild tracking
 - [ ] Performance summary
 - [ ] AI-assisted patches
@@ -93,9 +103,15 @@ FlutterLens uses the Flutter Inspector service extensions already exposed by the
 
 The live tree uses a dedicated Inspector object group. Refreshing the tree disposes the previous object group before requesting new diagnostic node IDs, which is important because Inspector IDs can become stale after hot reloads and restarts.
 
+Widget search expands lazy descendants up to a safety limit so matches can be found beyond the currently visible portion of the tree. Showing implementation widgets switches from Flutter's summary-tree APIs to the full Inspector tree instead of guessing which widget names belong to the framework.
+
+FlutterLens keeps tree selection and the running application's Inspector selection synchronized. Device-originated selection changes are received from VM Service inspect events and resolved back through the active tree object group. Select Widget Mode uses `ext.flutter.inspector.selectMode` when available and falls back to the legacy Inspector toggle for older supported Flutter versions.
+
 Selected-widget inspection uses a separate short-lived object group. Each new selection disposes the previous inspection group before FlutterLens requests `getProperties` and, when available, `getLayoutExplorerNode`. This keeps runtime references scoped to the currently displayed inspector state.
 
 Layout fields are shown only when Flutter exposes them for the selected diagnostic node. Some widgets do not produce a box-layout node, so size, constraints, offset, flex, or render-object information may legitimately be absent.
+
+The Open Source action posts the standard VM Service `ToolEvent` navigation event. If the connected IDE is listening for that event, it can open the selected file at the reported line and column; otherwise the action is a no-op.
 
 For the current MVP, direct Inspector queries are disabled while the main isolate is paused at a breakpoint. DevTools itself can fall back to evaluation-based Inspector calls in this case; FlutterLens will add an equivalent fallback only if it can be done cleanly without coupling the UI to DevTools internals.
 
