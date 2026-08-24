@@ -169,11 +169,13 @@ class LensWidgetTreeController extends ChangeNotifier {
       final selected = await _source.getSelectedWidget();
       if (_disposed || selected == null) return;
 
-      var state = _nodes[selected.id] ?? _findByIdentity(_WidgetIdentity(selected));
+      var state =
+          _nodes[selected.id] ?? _findByIdentity(_WidgetIdentity(selected));
       if (state == null) {
         await expandAll();
         if (_disposed) return;
-        state = _nodes[selected.id] ?? _findByIdentity(_WidgetIdentity(selected));
+        state =
+            _nodes[selected.id] ?? _findByIdentity(_WidgetIdentity(selected));
       }
 
       final widget = state?.widget ?? selected;
@@ -191,9 +193,8 @@ class LensWidgetTreeController extends ChangeNotifier {
 
   Future<void> setShowImplementationWidgets(bool value) async {
     if (_disposed || value == _source.showImplementationWidgets) return;
-    final selectedIdentity = _selectedWidget == null
-        ? null
-        : _WidgetIdentity(_selectedWidget!);
+    final selectedIdentity =
+        _selectedWidget == null ? null : _WidgetIdentity(_selectedWidget!);
     await _source.setShowImplementationWidgets(value);
     await refresh();
 
@@ -296,8 +297,9 @@ class LensWidgetTreeController extends ChangeNotifier {
     final root = _root;
     if (root == null || path.isEmpty || !path.first.matches(root)) return;
 
-    var current = _nodes[root.id];
-    if (current == null) return;
+    final rootState = _nodes[root.id];
+    if (rootState == null) return;
+    var current = rootState;
     for (var index = 1; index < path.length; index++) {
       if (!current.widget.hasChildren) return;
       current.isExpanded = true;
