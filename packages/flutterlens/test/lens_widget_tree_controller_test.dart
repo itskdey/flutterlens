@@ -39,7 +39,7 @@ void main() {
   });
 }
 
-class _FakeWidgetTreeSource implements LensWidgetTreeSource {
+class _FakeWidgetTreeSource extends LensWidgetTreeSource {
   static const root = LensWidget(
     id: 'root',
     name: 'Scaffold',
