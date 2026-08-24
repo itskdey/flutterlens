@@ -7,6 +7,7 @@ void main() {
   testWidgets('renders selected widget layout, source, and properties', (
     tester,
   ) async {
+    var openSourceCount = 0;
     const widget = LensWidget(
       id: 'widget-1',
       name: 'Container',
@@ -51,13 +52,14 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: LensTheme.dark(),
-        home: const Scaffold(
+        home: Scaffold(
           body: SizedBox(
             width: 420,
             height: 760,
             child: LensWidgetInspectorView(
               widget: widget,
               inspection: inspection,
+              onOpenSource: () => openSourceCount++,
             ),
           ),
         ),
@@ -69,9 +71,14 @@ void main() {
     expect(find.text('320 × 96'), findsOneWidget);
     expect(find.text('SOURCE'), findsOneWidget);
     expect(find.text('lib/features/home/home_screen.dart'), findsOneWidget);
+    expect(find.text('Open Source'), findsOneWidget);
     expect(find.text('PROPERTIES'), findsOneWidget);
     expect(find.text('color'), findsOneWidget);
     expect(find.text('alignment'), findsOneWidget);
     expect(find.text('RenderConstrainedBox'), findsOneWidget);
+
+    await tester.tap(find.text('Open Source'));
+    await tester.pump();
+    expect(openSourceCount, 1);
   });
 }
