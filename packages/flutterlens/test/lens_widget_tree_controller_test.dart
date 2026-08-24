@@ -61,7 +61,8 @@ void main() {
 
     await controller.setSearchQuery('');
     controller.collapseAll();
-    expect(controller.visibleNodes.map((item) => item.widget.name), ['Scaffold']);
+    expect(
+        controller.visibleNodes.map((item) => item.widget.name), ['Scaffold']);
 
     await controller.expandAll();
     expect(controller.visibleNodes.map((item) => item.widget.name), [
