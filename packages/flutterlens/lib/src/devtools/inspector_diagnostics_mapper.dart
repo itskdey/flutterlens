@@ -108,7 +108,9 @@ class InspectorDiagnosticsMapper {
           _string(renderObject?['widgetRuntimeType']),
       flexFactor: _int(json['flexFactor']),
       flexFit: _string(json['flexFit']),
-      isFlex: runtimeType == 'Row' || runtimeType == 'Column' || runtimeType == 'Flex',
+      isFlex: runtimeType == 'Row' ||
+          runtimeType == 'Column' ||
+          runtimeType == 'Flex',
     );
   }
 
