@@ -13,8 +13,7 @@ class DevToolsWidgetInspectorSource implements LensWidgetInspectorSource {
         _groupName = _nextGroupName();
 
   static const _propertiesExtension = 'ext.flutter.inspector.getProperties';
-  static const _layoutExtension =
-      'ext.flutter.inspector.getLayoutExplorerNode';
+  static const _layoutExtension = 'ext.flutter.inspector.getLayoutExplorerNode';
   static const _disposeGroupExtension = 'ext.flutter.inspector.disposeGroup';
   static const _serviceTimeout = Duration(seconds: 3);
 
@@ -50,7 +49,8 @@ class DevToolsWidgetInspectorSource implements LensWidgetInspectorSource {
           'subtreeDepth': '1',
         },
       );
-      layout = _mapper.layoutFromJson(_resultOf(layoutResponse, _layoutExtension));
+      layout =
+          _mapper.layoutFromJson(_resultOf(layoutResponse, _layoutExtension));
     }
 
     return LensWidgetInspection(
