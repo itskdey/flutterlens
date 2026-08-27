@@ -7,9 +7,8 @@ import 'package:vm_service/vm_service.dart';
 import 'performance_event_mapper.dart';
 
 class DevToolsPerformanceSource implements LensPerformanceSource {
-  DevToolsPerformanceSource({
-    PerformanceEventMapper mapper = const PerformanceEventMapper(),
-  }) : _mapper = mapper;
+  DevToolsPerformanceSource({PerformanceEventMapper? mapper})
+      : _mapper = mapper ?? PerformanceEventMapper();
 
   static const _trackRebuildsExtension =
       'ext.flutter.inspector.trackRebuildDirtyWidgets';
