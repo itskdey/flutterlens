@@ -21,8 +21,10 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
   final Map<int, _PerformanceLocation> _locations = {};
 
   StreamSubscription<Event>? _extensionSubscription;
-  String? _activeIsolateId;
-  bool _started = false;
+  VmService? _boundService;
+  String? _boundIsolateId;
+  String? _activeEventIsolateId;
+  bool _hasStartedOnce = false;
   bool _disposed = false;
   bool _rebuildTrackingEnabled = false;
   bool _repaintTrackingEnabled = false;
@@ -39,8 +41,21 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
   @override
   Future<void> start() async {
     _checkNotDisposed();
-    if (_started) return;
     final context = await _context();
+    final sameBinding = identical(_boundService, context.service) &&
+        _boundIsolateId == context.isolateId &&
+        _extensionSubscription != null;
+    if (sameBinding) return;
+
+    final shouldTrackRebuilds =
+        _hasStartedOnce ? _rebuildTrackingEnabled : true;
+    final shouldTrackRepaints = _repaintTrackingEnabled;
+
+    await _extensionSubscription?.cancel();
+    _boundService = context.service;
+    _boundIsolateId = context.isolateId;
+    _activeEventIsolateId = context.isolateId;
+    _locations.clear();
     _extensionSubscription = context.service.onExtensionEvent.listen(
       _handleExtensionEvent,
       onError: (Object error, StackTrace stackTrace) {
@@ -51,26 +66,48 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
         );
       },
     );
-    _started = true;
 
-    // Rebuild counting is the primary Phase 6 signal. Repaint tracking is kept
-    // opt-in because profiling paints adds more instrumentation overhead.
-    await setRebuildTracking(true);
+    _hasStartedOnce = true;
+    _rebuildTrackingEnabled = shouldTrackRebuilds;
+    _repaintTrackingEnabled = shouldTrackRepaints;
+
+    if (shouldTrackRebuilds) {
+      await _setTrackingExtensionOnContext(
+        _trackRebuildsExtension,
+        true,
+        context,
+      );
+    }
+    if (shouldTrackRepaints) {
+      await _setTrackingExtensionOnContext(
+        _trackRepaintsExtension,
+        true,
+        context,
+      );
+    }
   }
 
   @override
   Future<void> setRebuildTracking(bool enabled) async {
     _checkNotDisposed();
-    if (_rebuildTrackingEnabled == enabled) return;
-    await _setTrackingExtension(_trackRebuildsExtension, enabled);
+    final context = await _context();
+    await _setTrackingExtensionOnContext(
+      _trackRebuildsExtension,
+      enabled,
+      context,
+    );
     _rebuildTrackingEnabled = enabled;
   }
 
   @override
   Future<void> setRepaintTracking(bool enabled) async {
     _checkNotDisposed();
-    if (_repaintTrackingEnabled == enabled) return;
-    await _setTrackingExtension(_trackRepaintsExtension, enabled);
+    final context = await _context();
+    await _setTrackingExtensionOnContext(
+      _trackRepaintsExtension,
+      enabled,
+      context,
+    );
     _repaintTrackingEnabled = enabled;
   }
 
@@ -82,8 +119,8 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     }
 
     final isolateId = event.isolate?.id;
-    if (isolateId != null && isolateId != _activeIsolateId) {
-      _activeIsolateId = isolateId;
+    if (isolateId != null && isolateId != _activeEventIsolateId) {
+      _activeEventIsolateId = isolateId;
       _locations.clear();
     }
 
@@ -93,7 +130,10 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
         final frame = _parseFrame(data);
         if (frame != null) {
           _updates.add(
-            LensPerformanceUpdate(frame: frame, frameNumber: frame.frameNumber),
+            LensPerformanceUpdate(
+              frame: frame,
+              frameNumber: frame.frameNumber,
+            ),
           );
         }
         return;
@@ -221,10 +261,15 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     _processLocations(json?['result']);
   }
 
-  Future<void> _setTrackingExtension(String extension, bool enabled) async {
-    final context = await _context();
+  Future<void> _setTrackingExtensionOnContext(
+    String extension,
+    bool enabled,
+    ({VmService service, String isolateId}) context,
+  ) async {
     if (!await _waitForExtension(extension)) {
-      throw StateError('Flutter performance extension $extension is unavailable.');
+      throw StateError(
+        'Flutter performance extension $extension is unavailable.',
+      );
     }
     final response = await context.service.callServiceExtension(
       extension,
@@ -310,12 +355,22 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
       if (_rebuildTrackingEnabled &&
           serviceManager.connectedState.value.connected &&
           !serviceManager.isMainIsolatePaused) {
-        await _setTrackingExtension(_trackRebuildsExtension, false);
+        final context = await _context();
+        await _setTrackingExtensionOnContext(
+          _trackRebuildsExtension,
+          false,
+          context,
+        );
       }
       if (_repaintTrackingEnabled &&
           serviceManager.connectedState.value.connected &&
           !serviceManager.isMainIsolatePaused) {
-        await _setTrackingExtension(_trackRepaintsExtension, false);
+        final context = await _context();
+        await _setTrackingExtensionOnContext(
+          _trackRepaintsExtension,
+          false,
+          context,
+        );
       }
     } catch (error, stackTrace) {
       LensLogger.warning(
@@ -326,6 +381,9 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     }
     _rebuildTrackingEnabled = false;
     _repaintTrackingEnabled = false;
+    _boundService = null;
+    _boundIsolateId = null;
+    _activeEventIsolateId = null;
     await _extensionSubscription?.cancel();
     await _updates.close();
     _disposed = true;
