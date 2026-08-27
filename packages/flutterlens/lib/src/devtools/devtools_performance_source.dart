@@ -4,7 +4,13 @@ import 'package:devtools_extensions/devtools_extensions.dart';
 import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:vm_service/vm_service.dart';
 
+import 'performance_event_mapper.dart';
+
 class DevToolsPerformanceSource implements LensPerformanceSource {
+  DevToolsPerformanceSource({
+    PerformanceEventMapper mapper = const PerformanceEventMapper(),
+  }) : _mapper = mapper;
+
   static const _trackRebuildsExtension =
       'ext.flutter.inspector.trackRebuildDirtyWidgets';
   static const _trackRepaintsExtension =
@@ -16,9 +22,9 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
   static const _repaintEvent = 'Flutter.RepaintWidgets';
   static const _serviceTimeout = Duration(seconds: 3);
 
+  final PerformanceEventMapper _mapper;
   final StreamController<LensPerformanceUpdate> _updates =
       StreamController<LensPerformanceUpdate>.broadcast();
-  final Map<int, _PerformanceLocation> _locations = {};
 
   StreamSubscription<Event>? _extensionSubscription;
   VmService? _boundService;
@@ -55,7 +61,7 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     _boundService = context.service;
     _boundIsolateId = context.isolateId;
     _activeEventIsolateId = context.isolateId;
-    _locations.clear();
+    _mapper.resetLocations();
     _extensionSubscription = context.service.onExtensionEvent.listen(
       _handleExtensionEvent,
       onError: (Object error, StackTrace stackTrace) {
@@ -121,13 +127,13 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     final isolateId = event.isolate?.id;
     if (isolateId != null && isolateId != _activeEventIsolateId) {
       _activeEventIsolateId = isolateId;
-      _locations.clear();
+      _mapper.resetLocations();
     }
 
     final data = event.extensionData!.data;
     try {
       if (kind == _frameEvent) {
-        final frame = _parseFrame(data);
+        final frame = _mapper.frameFromJson(data);
         if (frame != null) {
           _updates.add(
             LensPerformanceUpdate(
@@ -139,13 +145,12 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
         return;
       }
 
-      _processLocations(data['locations']);
-      final unresolvedIds = _unresolvedIds(data['events']);
-      if (unresolvedIds.isNotEmpty) {
+      _mapper.processLocations(data['locations']);
+      if (_mapper.unresolvedIds(data['events']).isNotEmpty) {
         await _resolveLocations();
       }
-      final samples = _parseSamples(data['events']);
-      final frameNumber = _asInt(data['frameNumber']);
+      final samples = _mapper.samplesFromEvents(data['events']);
+      final frameNumber = _mapper.intValue(data['frameNumber']);
       if (kind == _rebuildEvent) {
         _updates.add(
           LensPerformanceUpdate(
@@ -170,81 +175,6 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     }
   }
 
-  LensFrameMetric? _parseFrame(Map<String, dynamic> data) {
-    final frameNumber = _asInt(data['number']);
-    final build = _asInt(data['build']);
-    final raster = _asInt(data['raster']);
-    final elapsed = _asInt(data['elapsed']);
-    final vsync = _asInt(data['vsyncOverhead']);
-    if (frameNumber == null ||
-        build == null ||
-        raster == null ||
-        elapsed == null ||
-        vsync == null) {
-      return null;
-    }
-    return LensFrameMetric(
-      frameNumber: frameNumber,
-      buildTime: Duration(microseconds: build),
-      rasterTime: Duration(microseconds: raster),
-      elapsedTime: Duration(microseconds: elapsed),
-      vsyncOverhead: Duration(microseconds: vsync),
-    );
-  }
-
-  void _processLocations(Object? rawLocations) {
-    if (rawLocations is! Map) return;
-    for (final entry in rawLocations.entries) {
-      final file = entry.key.toString();
-      final raw = entry.value;
-      if (raw is! Map) continue;
-      final ids = _intList(raw['ids']);
-      final lines = _intList(raw['lines']);
-      final columns = _intList(raw['columns']);
-      final names = _stringList(raw['names']);
-      final length = [ids.length, lines.length, columns.length, names.length]
-          .reduce((a, b) => a < b ? a : b);
-      for (var index = 0; index < length; index++) {
-        _locations[ids[index]] = _PerformanceLocation(
-          name: names[index],
-          source: LensSourceLocation(
-            file: file,
-            line: lines[index],
-            column: columns[index],
-          ),
-        );
-      }
-    }
-  }
-
-  Set<int> _unresolvedIds(Object? rawEvents) {
-    final events = _intList(rawEvents);
-    final unresolved = <int>{};
-    for (var index = 0; index + 1 < events.length; index += 2) {
-      final id = events[index];
-      if (!_locations.containsKey(id)) unresolved.add(id);
-    }
-    return unresolved;
-  }
-
-  List<LensPerformanceSample> _parseSamples(Object? rawEvents) {
-    final events = _intList(rawEvents);
-    final samples = <LensPerformanceSample>[];
-    for (var index = 0; index + 1 < events.length; index += 2) {
-      final id = events[index];
-      final count = events[index + 1];
-      final location = _locations[id];
-      samples.add(
-        LensPerformanceSample(
-          name: location?.name ?? 'Location #$id',
-          count: count,
-          sourceLocation: location?.source,
-        ),
-      );
-    }
-    return samples;
-  }
-
   Future<void> _resolveLocations() async {
     final context = await _context();
     if (!await _waitForExtension(_locationMapExtension)) return;
@@ -258,7 +188,7 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
         '$_locationMapExtension failed: ${json!['errorMessage']}',
       );
     }
-    _processLocations(json?['result']);
+    _mapper.processLocations(json?['result']);
   }
 
   Future<void> _setTrackingExtensionOnContext(
@@ -323,25 +253,6 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     }
   }
 
-  List<int> _intList(Object? value) {
-    if (value is! List) return const [];
-    return value.map(_asInt).whereType<int>().toList(growable: false);
-  }
-
-  List<String> _stringList(Object? value) {
-    if (value is! List) return const [];
-    return value.map((item) => item.toString()).toList(growable: false);
-  }
-
-  int? _asInt(Object? value) {
-    return switch (value) {
-      int() => value,
-      num() => value.toInt(),
-      String() => int.tryParse(value),
-      _ => null,
-    };
-  }
-
   void _checkNotDisposed() {
     if (_disposed) {
       throw StateError('DevToolsPerformanceSource has been disposed.');
@@ -388,11 +299,4 @@ class DevToolsPerformanceSource implements LensPerformanceSource {
     await _updates.close();
     _disposed = true;
   }
-}
-
-class _PerformanceLocation {
-  const _PerformanceLocation({required this.name, required this.source});
-
-  final String name;
-  final LensSourceLocation source;
 }
