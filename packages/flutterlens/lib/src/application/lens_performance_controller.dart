@@ -51,7 +51,7 @@ class LensPerformanceController extends ChangeNotifier {
   }
 
   Future<void> start() async {
-    if (_disposed || _started || _isStarting) return;
+    if (_disposed || _isStarting) return;
     _isStarting = true;
     _error = null;
     notifyListeners();
@@ -59,6 +59,7 @@ class LensPerformanceController extends ChangeNotifier {
       _handleUpdate,
       onError: (Object error, StackTrace stackTrace) {
         if (_disposed) return;
+        _started = false;
         _error = LensError(
           code: 'performance_stream_failed',
           message: 'Flutter performance monitoring stopped unexpectedly.',
@@ -79,6 +80,7 @@ class LensPerformanceController extends ChangeNotifier {
       _started = true;
     } catch (error, stackTrace) {
       if (_disposed) return;
+      _started = false;
       _error = LensError(
         code: 'performance_start_failed',
         message: 'Could not start Flutter performance monitoring.',
@@ -129,6 +131,12 @@ class LensPerformanceController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void markDisconnected() {
+    if (_disposed || !_started) return;
+    _started = false;
+    notifyListeners();
+  }
+
   void _handleUpdate(LensPerformanceUpdate update) {
     if (_disposed) return;
     final frame = update.frame;
@@ -146,7 +154,10 @@ class LensPerformanceController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _accumulate(List<LensPerformanceSample> samples, {required bool rebuild}) {
+  void _accumulate(
+    List<LensPerformanceSample> samples, {
+    required bool rebuild,
+  }) {
     for (final sample in samples) {
       final hotspot = _hotspots.putIfAbsent(
         sample.identity,
