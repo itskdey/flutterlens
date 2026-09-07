@@ -5,9 +5,11 @@ import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:flutterlens_ui/flutterlens_ui.dart';
 
 import '../../application/lens_connection_controller.dart';
+import '../../application/lens_performance_controller.dart';
 import '../../application/lens_widget_inspector_controller.dart';
 import '../../application/lens_widget_tree_controller.dart';
 import '../../devtools/devtools_connection_source.dart';
+import '../../devtools/devtools_performance_source.dart';
 import '../../devtools/devtools_runtime_probe.dart';
 import '../../devtools/devtools_widget_inspector_source.dart';
 import '../../devtools/devtools_widget_tree_source.dart';
@@ -23,9 +25,11 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   late final LensConnectionController _connection;
   late final LensWidgetTreeController _tree;
   late final LensWidgetInspectorController _inspector;
+  late final LensPerformanceController _performance;
   late final Listenable _workspace;
   late bool _wasConnected;
   String? _lastInspectedSelectionId;
+  _CenterMode _centerMode = _CenterMode.performance;
 
   @override
   void initState() {
@@ -38,12 +42,19 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     _inspector = LensWidgetInspectorController(
       DevToolsWidgetInspectorSource(),
     );
-    _workspace = Listenable.merge([_connection, _tree, _inspector]);
+    _performance = LensPerformanceController(DevToolsPerformanceSource());
+    _workspace = Listenable.merge([
+      _connection,
+      _tree,
+      _inspector,
+      _performance,
+    ]);
     _wasConnected = _connection.snapshot.isConnected;
     _connection.addListener(_handleConnectionChanged);
     _tree.addListener(_handleTreeChanged);
     if (_wasConnected) {
       unawaited(_tree.refresh());
+      unawaited(_performance.start());
     }
   }
 
@@ -51,6 +62,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   void dispose() {
     _connection.removeListener(_handleConnectionChanged);
     _tree.removeListener(_handleTreeChanged);
+    _performance.dispose();
     _inspector.dispose();
     _tree.dispose();
     _connection.dispose();
@@ -73,14 +85,17 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
             onRefresh: snapshot.isConnected ? _refreshAll : null,
             refreshing: _connection.isLoadingRuntime ||
                 _tree.isLoading ||
-                _inspector.isLoading,
+                _inspector.isLoading ||
+                _performance.isStarting,
             treePanel: _Panel(
               eyebrow: 'WIDGET TREE',
               child: _buildTreePanel(snapshot),
             ),
             centerPanel: _Panel(
-              eyebrow: 'RUNTIME',
-              child: _buildRuntimePanel(snapshot, runtimeInfo),
+              eyebrow: _centerMode == _CenterMode.performance
+                  ? 'PERFORMANCE'
+                  : 'RUNTIME',
+              child: _buildCenterPanel(snapshot, runtimeInfo),
             ),
             inspectorPanel: _Panel(
               eyebrow: 'INSPECTOR',
@@ -98,6 +113,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     await Future.wait([
       _connection.refreshRuntime(),
       _tree.refresh(),
+      _performance.start(),
     ]);
   }
 
@@ -107,10 +123,13 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     _wasConnected = connected;
     if (connected) {
       unawaited(_tree.refresh());
+      unawaited(_performance.start());
     } else {
       _lastInspectedSelectionId = null;
       _inspector.clear();
       _tree.clear();
+      _performance.markDisconnected();
+      _performance.clear();
     }
   }
 
@@ -184,6 +203,62 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCenterPanel(
+    LensConnectionSnapshot snapshot,
+    LensRuntimeInfo? runtimeInfo,
+  ) {
+    return Column(
+      children: [
+        _CenterModeSwitcher(
+          mode: _centerMode,
+          onChanged: (mode) {
+            if (_centerMode == mode) return;
+            setState(() => _centerMode = mode);
+          },
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _centerMode == _CenterMode.performance
+              ? _buildPerformancePanel(snapshot)
+              : _buildRuntimePanel(snapshot, runtimeInfo),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPerformancePanel(LensConnectionSnapshot snapshot) {
+    if (!snapshot.isConnected) {
+      return const LensEmptyState(
+        icon: Icons.speed_rounded,
+        title: 'Waiting for Flutter application',
+        description:
+            'Connect a debug Flutter app to capture real frame and rebuild activity.',
+      );
+    }
+
+    return LensPerformanceOverview(
+      started: _performance.isStarted,
+      starting: _performance.isStarting,
+      rebuildTrackingEnabled: _performance.rebuildTrackingEnabled,
+      repaintTrackingEnabled: _performance.repaintTrackingEnabled,
+      totalFrames: _performance.totalFrames,
+      jankyFrames: _performance.jankyFrames,
+      jankRate: _performance.jankRate,
+      averageBuildTime: _performance.averageBuildTime,
+      averageRasterTime: _performance.averageRasterTime,
+      latestFrame: _performance.latestFrame,
+      hotspots: _performance.hotspots,
+      error: _performance.error,
+      onToggleRebuilds: (enabled) {
+        unawaited(_performance.setRebuildTracking(enabled));
+      },
+      onToggleRepaints: (enabled) {
+        unawaited(_performance.setRepaintTracking(enabled));
+      },
+      onClear: _performance.clear,
     );
   }
 
@@ -269,6 +344,76 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       icon: Icons.hourglass_empty_rounded,
       title: 'Inspector data pending',
       description: 'FlutterLens is querying live Inspector data.',
+    );
+  }
+}
+
+enum _CenterMode { performance, runtime }
+
+class _CenterModeSwitcher extends StatelessWidget {
+  const _CenterModeSwitcher({required this.mode, required this.onChanged});
+
+  final _CenterMode mode;
+  final ValueChanged<_CenterMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 38,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: [
+            _CenterModeButton(
+              label: 'Performance',
+              icon: Icons.speed_rounded,
+              selected: mode == _CenterMode.performance,
+              onPressed: () => onChanged(_CenterMode.performance),
+            ),
+            const SizedBox(width: 4),
+            _CenterModeButton(
+              label: 'Runtime',
+              icon: Icons.memory_rounded,
+              selected: mode == _CenterMode.runtime,
+              onPressed: () => onChanged(_CenterMode.runtime),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CenterModeButton extends StatelessWidget {
+  const _CenterModeButton({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 13),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        foregroundColor:
+            selected ? LensColors.accent : LensColors.textSecondary,
+        backgroundColor:
+            selected ? LensColors.accentMuted : Colors.transparent,
+        textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        minimumSize: const Size(0, 28),
+        visualDensity: VisualDensity.compact,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
     );
   }
 }
