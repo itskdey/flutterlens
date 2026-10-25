@@ -37,6 +37,37 @@ void main() {
     }
   });
 
+  test('extracts source only from explicit Dart stack frame', () {
+    final diagnostic = mapper.fromFlutterError({
+      'renderedErrorText':
+          'A failure happened\n#0 Widget.build (file:///tmp/lib/home.dart:42:7)'
+    }, id: 4, timestamp: timestamp);
+
+    expect(diagnostic!.sourceLocation?.display,
+        'file:///tmp/lib/home.dart:42:7');
+    expect(diagnostic.canNavigateToSource, isTrue);
+    expect(diagnostic.report, contains('Source: file:///tmp/lib/home.dart:42:7'));
+    expect(diagnostic.report, contains('Recorded:'));
+  });
+
+  test('package source is visible but cannot navigate as a file URI', () {
+    final diagnostic = mapper.fromFlutterError({
+      'renderedErrorText':
+          'Bad state\n#0 Widget.build (package:app/home.dart:17:3)'
+    }, id: 5, timestamp: timestamp);
+    expect(diagnostic!.sourceLocation?.file, 'package:app/home.dart');
+    expect(diagnostic.canNavigateToSource, isFalse);
+  });
+
+  test('does not guess source location from an ordinary exception', () {
+    final diagnostic = mapper.fromFlutterError(
+      {'renderedErrorText': 'StateError: no such item'},
+      id: 6,
+      timestamp: timestamp,
+    );
+    expect(diagnostic!.sourceLocation, isNull);
+  });
+
   test('maps paused exception without inventing a stack trace', () {
     final diagnostic = mapper.fromPausedException(
       id: 2,
