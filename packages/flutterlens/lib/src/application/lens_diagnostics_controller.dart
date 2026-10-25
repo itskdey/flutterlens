@@ -73,7 +73,9 @@ class LensDiagnosticsController extends ChangeNotifier {
   Future<void> openSelectedSource() async {
     final event = _selected;
     final source = event?.sourceLocation;
-    if (_disposed || event == null || !event.canNavigateToSource ||
+    if (_disposed ||
+        event == null ||
+        !event.canNavigateToSource ||
         source == null) {
       return;
     }
