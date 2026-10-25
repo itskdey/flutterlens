@@ -21,6 +21,7 @@ class DiagnosticsEventMapper {
       title: summary,
       details: details,
       isolateId: isolateId,
+      sourceLocation: _firstDartLocation(details),
     );
   }
 
@@ -42,6 +43,26 @@ class DiagnosticsEventMapper {
       details: details,
       isolateId: isolateId,
     );
+  }
+
+  LensSourceLocation? _firstDartLocation(String text) {
+    // Only recognize explicit file paths or Dart URIs with line/column data.
+    // We never guess a source from an exception message alone.
+    final pattern = RegExp(
+      r'((?:file:|package:|/|[A-Za-z]:[\\/])[^()\s]+?\.dart):(\d+):(\d+)',
+    );
+    for (final line in text.split('\n')) {
+      final match = pattern.firstMatch(line);
+      if (match == null) continue;
+      final file = match.group(1);
+      final row = int.tryParse(match.group(2) ?? '');
+      final col = int.tryParse(match.group(3) ?? '');
+      if (file == null || row == null || col == null || row < 1 || col < 1) {
+        continue;
+      }
+      return LensSourceLocation(file: file, line: row, column: col);
+    }
+    return null;
   }
 
   String _firstMeaningfulLine(String text) {
