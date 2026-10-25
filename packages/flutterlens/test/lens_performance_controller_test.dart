@@ -84,7 +84,8 @@ void main() {
     controller.dispose();
   });
 
-  test('tracking toggles delegate to source and clear resets metrics', () async {
+  test('tracking toggles delegate to source and clear resets metrics',
+      () async {
     final source = _FakePerformanceSource();
     final controller = LensPerformanceController(source);
 
