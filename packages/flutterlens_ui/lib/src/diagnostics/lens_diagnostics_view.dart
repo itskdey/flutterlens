@@ -257,7 +257,8 @@ class LensDiagnosticsView extends StatelessWidget {
                           ),
                           IconButton(
                             tooltip: 'Copy incident report',
-                            icon: const Icon(Icons.description_outlined, size: 15),
+                            icon: const Icon(Icons.description_outlined,
+                                size: 15),
                             onPressed: () => Clipboard.setData(
                               ClipboardData(text: selected!.report),
                             ),
