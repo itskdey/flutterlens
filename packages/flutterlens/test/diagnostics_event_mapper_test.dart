@@ -7,7 +7,8 @@ void main() {
   final timestamp = DateTime.fromMillisecondsSinceEpoch(1720000000000);
 
   test('maps real Flutter.Error payload and preserves original details', () {
-    const details = '══╡ ERROR ╞══\nRenderFlex overflowed by 12 pixels\n#0 stack';
+    const details =
+        '══╡ ERROR ╞══\nRenderFlex overflowed by 12 pixels\n#0 stack';
     final diagnostic = mapper.fromFlutterError(
       {'renderedErrorText': details},
       id: 1,
