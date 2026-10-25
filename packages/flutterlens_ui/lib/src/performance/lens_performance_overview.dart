@@ -107,9 +107,10 @@ class LensPerformanceOverview extends StatelessWidget {
                     label: 'AVG UI',
                     value: _formatDuration(averageBuildTime),
                     detail: 'build time',
-                    status: averageBuildTime > LensFrameMetric.targetFrameTime60Hz
-                        ? _MetricStatus.bad
-                        : _MetricStatus.neutral,
+                    status:
+                        averageBuildTime > LensFrameMetric.targetFrameTime60Hz
+                            ? _MetricStatus.bad
+                            : _MetricStatus.neutral,
                   ),
                 ),
                 SizedBox(
@@ -284,9 +285,8 @@ class _TrackingChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: enabled
-                    ? LensColors.textPrimary
-                    : LensColors.textSecondary,
+                color:
+                    enabled ? LensColors.textPrimary : LensColors.textSecondary,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
@@ -415,7 +415,8 @@ class _LatestFrameCard extends StatelessWidget {
               Text(
                 frame.isJanky ? 'OVER BUDGET' : 'WITHIN BUDGET',
                 style: TextStyle(
-                  color: frame.isJanky ? LensColors.warning : LensColors.success,
+                  color:
+                      frame.isJanky ? LensColors.warning : LensColors.success,
                   fontSize: 8,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.6,
@@ -631,12 +632,14 @@ class _InlineError extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline_rounded, size: 13, color: LensColors.error),
+          const Icon(Icons.error_outline_rounded,
+              size: 13, color: LensColors.error),
           const SizedBox(width: 7),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: LensColors.textSecondary, fontSize: 9),
+              style:
+                  const TextStyle(color: LensColors.textSecondary, fontSize: 9),
             ),
           ),
         ],
