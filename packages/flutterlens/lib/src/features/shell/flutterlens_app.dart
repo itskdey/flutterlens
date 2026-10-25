@@ -406,8 +406,7 @@ class _CenterModeButton extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor:
             selected ? LensColors.accent : LensColors.textSecondary,
-        backgroundColor:
-            selected ? LensColors.accentMuted : Colors.transparent,
+        backgroundColor: selected ? LensColors.accentMuted : Colors.transparent,
         textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(horizontal: 9),
         minimumSize: const Size(0, 28),
