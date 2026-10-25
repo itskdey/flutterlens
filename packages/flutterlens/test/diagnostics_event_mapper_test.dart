@@ -46,7 +46,8 @@ void main() {
     expect(
         diagnostic!.sourceLocation?.display, 'file:///tmp/lib/home.dart:42:7');
     expect(diagnostic.canNavigateToSource, isTrue);
-    expect(diagnostic.report, contains('Source: file:///tmp/lib/home.dart:42:7'));
+    expect(
+        diagnostic.report, contains('Source: file:///tmp/lib/home.dart:42:7'));
     expect(diagnostic.report, contains('Recorded:'));
   });
 
