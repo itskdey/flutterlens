@@ -44,8 +44,7 @@ class LensDiagnosticsController extends ChangeNotifier {
           !event.title.toLowerCase().contains(q) &&
           !event.details.toLowerCase().contains(q) &&
           !event.kindLabel.toLowerCase().contains(q) &&
-          !(event.sourceLocation?.display.toLowerCase().contains(q) ??
-              false)) {
+          !(event.sourceLocation?.display.toLowerCase().contains(q) ?? false)) {
         continue;
       }
       if (seen.add(event.fingerprint)) result.add(event);
