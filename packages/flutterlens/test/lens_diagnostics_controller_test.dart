@@ -46,6 +46,49 @@ void main() {
     expect(source.startCalls, 2);
     controller.dispose();
   });
+  test('groups repeated reports and filters by category', () async {
+    final source = _FakeDiagnosticsSource();
+    final controller = LensDiagnosticsController(source);
+    await controller.start();
+    source.emit(_event(1, 'RenderFlex overflow'));
+    source.emit(_event(2, 'RenderFlex overflow'));
+    source.emit(_event(3, 'StateError'));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.totalEvents, 3);
+    expect(controller.visibleEvents, hasLength(2));
+    final duplicate = controller.visibleEvents.last;
+    expect(duplicate.id, 2);
+    expect(controller.repeatCounts[2], 2);
+    controller.setKindFilter(LensDiagnosticKind.pausedException);
+    expect(controller.visibleEvents, isEmpty);
+    controller.setKindFilter(LensDiagnosticKind.frameworkError);
+    expect(controller.visibleEvents, hasLength(2));
+    controller.dispose();
+  });
+
+  test('navigates to actual selected local source only', () async {
+    final source = _FakeDiagnosticsSource();
+    final controller = LensDiagnosticsController(source);
+    await controller.start();
+    source.emit(LensDiagnostic(
+      id: 10,
+      kind: LensDiagnosticKind.frameworkError,
+      timestamp: DateTime.fromMillisecondsSinceEpoch(1720000000000),
+      title: 'Failed',
+      details: 'Failed at /tmp/lib/main.dart:10:2',
+      sourceLocation: const LensSourceLocation(
+        file: '/tmp/lib/main.dart',
+        line: 10,
+        column: 2,
+      ),
+    ));
+    await Future<void>.delayed(Duration.zero);
+
+    await controller.openSelectedSource();
+    expect(source.openedSource?.display, '/tmp/lib/main.dart:10:2');
+    controller.dispose();
+  });
 }
 
 LensDiagnostic _event(int id, String description) => LensDiagnostic(
@@ -61,6 +104,7 @@ class _FakeDiagnosticsSource implements LensDiagnosticsSource {
       StreamController<LensDiagnostic>.broadcast();
 
   int startCalls = 0;
+  LensSourceLocation? openedSource;
 
   @override
   Stream<LensDiagnostic> get events => _controller.stream;
@@ -71,6 +115,11 @@ class _FakeDiagnosticsSource implements LensDiagnosticsSource {
   }
 
   void emit(LensDiagnostic event) => _controller.add(event);
+
+  @override
+  Future<void> navigateToSource(LensSourceLocation source) async {
+    openedSource = source;
+  }
 
   @override
   Future<void> dispose() => _controller.close();
