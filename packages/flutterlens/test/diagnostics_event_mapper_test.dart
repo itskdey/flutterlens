@@ -43,8 +43,8 @@ void main() {
           'A failure happened\n#0 Widget.build (file:///tmp/lib/home.dart:42:7)'
     }, id: 4, timestamp: timestamp);
 
-    expect(diagnostic!.sourceLocation?.display,
-        'file:///tmp/lib/home.dart:42:7');
+    expect(
+        diagnostic!.sourceLocation?.display, 'file:///tmp/lib/home.dart:42:7');
     expect(diagnostic.canNavigateToSource, isTrue);
     expect(diagnostic.report, contains('Source: file:///tmp/lib/home.dart:42:7'));
     expect(diagnostic.report, contains('Recorded:'));
