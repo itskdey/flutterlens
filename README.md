@@ -44,6 +44,9 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - Live runtime diagnostics from Flutter.Error VM Service extension events
 - Debugger pause-on-exception events from the VM Service debug stream
 - Searchable, bounded recent error timeline, raw diagnostic details, and copy action
+- Debugging triage: grouped repeating failures with occurrence counts and kind filters
+- Stack-frame source locations when provided by Flutter; local file navigation through VM ToolEvent
+- Copyable diagnostic incident reports with timestamp, type, isolate and raw details
 - Diagnostics subscription rebinding after connection changes; session reset on disconnect
 - Desktop-first dark application shell
 - Showcase Flutter app
@@ -69,6 +72,7 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - [x] Frame performance summary
 - [x] Source-attributed performance hotspots
 - [x] Runtime diagnostics timeline and exception details
+- [x] Repeated-error grouping, triage filters, source navigation and report copying
 - [ ] AI-assisted patches
 - [ ] Standalone CLI
 
@@ -145,7 +149,7 @@ When DevTools disconnects, the current performance session is marked stopped and
 
 The **Errors** tab listens to the DevTools-managed VM Service's `Flutter.Error` extension events and debugger `PauseException` events. It shows the actual rendered framework error text (including a stack trace when Flutter includes one) and VM-provided exception descriptions; it does not fabricate stack traces or catch errors not published to these streams.
 
-The timeline is scoped to the current DevTools session and capped at 200 events to avoid unbounded memory use. It is cleared on disconnect. This is a live view, not a crash reporter or historical error store. A custom `FlutterError.onError` handler that doesn't forward errors to Flutter's normal reporting path may prevent them from appearing.
+The timeline is scoped to the current DevTools session and capped at 200 events to avoid unbounded memory use. Phase 8 groups repeated issues by event type, title, and available source location while retaining original raw events. Occurrence counts describe the retained window, not historical totals. File navigation is shown only for local file URIs or absolute paths; `package:` paths are displayed but are not claimed to be navigable without source resolution. It is cleared on disconnect. This is a live view, not a crash reporter or historical error store. A custom `FlutterError.onError` handler that doesn't forward errors to Flutter's normal reporting path may prevent them from appearing.
 
 ## Architecture
 
