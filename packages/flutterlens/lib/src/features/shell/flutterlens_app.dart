@@ -5,10 +5,12 @@ import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:flutterlens_ui/flutterlens_ui.dart';
 
 import '../../application/lens_connection_controller.dart';
+import '../../application/lens_diagnostics_controller.dart';
 import '../../application/lens_performance_controller.dart';
 import '../../application/lens_widget_inspector_controller.dart';
 import '../../application/lens_widget_tree_controller.dart';
 import '../../devtools/devtools_connection_source.dart';
+import '../../devtools/devtools_diagnostics_source.dart';
 import '../../devtools/devtools_performance_source.dart';
 import '../../devtools/devtools_runtime_probe.dart';
 import '../../devtools/devtools_widget_inspector_source.dart';
@@ -26,6 +28,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   late final LensWidgetTreeController _tree;
   late final LensWidgetInspectorController _inspector;
   late final LensPerformanceController _performance;
+  late final LensDiagnosticsController _diagnostics;
   late final Listenable _workspace;
   late bool _wasConnected;
   String? _lastInspectedSelectionId;
@@ -43,11 +46,13 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       DevToolsWidgetInspectorSource(),
     );
     _performance = LensPerformanceController(DevToolsPerformanceSource());
+    _diagnostics = LensDiagnosticsController(DevToolsDiagnosticsSource());
     _workspace = Listenable.merge([
       _connection,
       _tree,
       _inspector,
       _performance,
+      _diagnostics,
     ]);
     _wasConnected = _connection.snapshot.isConnected;
     _connection.addListener(_handleConnectionChanged);
@@ -55,6 +60,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     if (_wasConnected) {
       unawaited(_tree.refresh());
       unawaited(_performance.start());
+      unawaited(_diagnostics.start());
     }
   }
 
@@ -62,6 +68,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   void dispose() {
     _connection.removeListener(_handleConnectionChanged);
     _tree.removeListener(_handleTreeChanged);
+    _diagnostics.dispose();
     _performance.dispose();
     _inspector.dispose();
     _tree.dispose();
@@ -86,15 +93,18 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
             refreshing: _connection.isLoadingRuntime ||
                 _tree.isLoading ||
                 _inspector.isLoading ||
-                _performance.isStarting,
+                _performance.isStarting ||
+                _diagnostics.isStarting,
             treePanel: _Panel(
               eyebrow: 'WIDGET TREE',
               child: _buildTreePanel(snapshot),
             ),
             centerPanel: _Panel(
-              eyebrow: _centerMode == _CenterMode.performance
-                  ? 'PERFORMANCE'
-                  : 'RUNTIME',
+              eyebrow: switch (_centerMode) {
+                _CenterMode.performance => 'PERFORMANCE',
+                _CenterMode.runtime => 'RUNTIME',
+                _CenterMode.diagnostics => 'DIAGNOSTICS',
+              },
               child: _buildCenterPanel(snapshot, runtimeInfo),
             ),
             inspectorPanel: _Panel(
@@ -114,6 +124,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       _connection.refreshRuntime(),
       _tree.refresh(),
       _performance.start(),
+      _diagnostics.start(),
     ]);
   }
 
@@ -124,12 +135,14 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
     if (connected) {
       unawaited(_tree.refresh());
       unawaited(_performance.start());
+      unawaited(_diagnostics.start());
     } else {
       _lastInspectedSelectionId = null;
       _inspector.clear();
       _tree.clear();
       _performance.markDisconnected();
       _performance.clear();
+      _diagnostics.markDisconnected();
     }
   }
 
@@ -221,9 +234,11 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
         ),
         const Divider(height: 1),
         Expanded(
-          child: _centerMode == _CenterMode.performance
-              ? _buildPerformancePanel(snapshot)
-              : _buildRuntimePanel(snapshot, runtimeInfo),
+          child: switch (_centerMode) {
+            _CenterMode.performance => _buildPerformancePanel(snapshot),
+            _CenterMode.runtime => _buildRuntimePanel(snapshot, runtimeInfo),
+            _CenterMode.diagnostics => _buildDiagnosticsPanel(snapshot),
+          },
         ),
       ],
     );
@@ -259,6 +274,28 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
         unawaited(_performance.setRepaintTracking(enabled));
       },
       onClear: _performance.clear,
+    );
+  }
+
+  Widget _buildDiagnosticsPanel(LensConnectionSnapshot snapshot) {
+    if (!snapshot.isConnected) {
+      return const LensEmptyState(
+        icon: Icons.bug_report_outlined,
+        title: 'Waiting for Flutter application',
+        description: 'Connect a Flutter app to capture runtime errors.',
+      );
+    }
+    return LensDiagnosticsView(
+      started: _diagnostics.isStarted,
+      starting: _diagnostics.isStarting,
+      totalEvents: _diagnostics.totalEvents,
+      events: _diagnostics.visibleEvents,
+      selected: _diagnostics.selected,
+      query: _diagnostics.query,
+      onSearch: _diagnostics.setQuery,
+      onSelect: _diagnostics.select,
+      onClear: _diagnostics.clear,
+      error: _diagnostics.error,
     );
   }
 
@@ -348,7 +385,7 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
   }
 }
 
-enum _CenterMode { performance, runtime }
+enum _CenterMode { performance, runtime, diagnostics }
 
 class _CenterModeSwitcher extends StatelessWidget {
   const _CenterModeSwitcher({required this.mode, required this.onChanged});
@@ -376,6 +413,13 @@ class _CenterModeSwitcher extends StatelessWidget {
               icon: Icons.memory_rounded,
               selected: mode == _CenterMode.runtime,
               onPressed: () => onChanged(_CenterMode.runtime),
+            ),
+            const SizedBox(width: 4),
+            _CenterModeButton(
+              label: 'Errors',
+              icon: Icons.bug_report_outlined,
+              selected: mode == _CenterMode.diagnostics,
+              onPressed: () => onChanged(_CenterMode.diagnostics),
             ),
           ],
         ),

@@ -41,6 +41,10 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - Aggregated rebuild/repaint hotspots ranked by activity
 - Reconnect and hot-restart-safe performance monitoring
 - Performance and Runtime center-pane views
+- Live runtime diagnostics from Flutter.Error VM Service extension events
+- Debugger pause-on-exception events from the VM Service debug stream
+- Searchable, bounded recent error timeline, raw diagnostic details, and copy action
+- Diagnostics subscription rebinding after connection changes; session reset on disconnect
 - Desktop-first dark application shell
 - Showcase Flutter app
 
@@ -64,6 +68,7 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - [x] Repaint tracking
 - [x] Frame performance summary
 - [x] Source-attributed performance hotspots
+- [x] Runtime diagnostics timeline and exception details
 - [ ] AI-assisted patches
 - [ ] Standalone CLI
 
@@ -135,6 +140,12 @@ FlutterLens resolves event location ids through the Inspector's `widgetLocationI
 The dashboard uses a 16.7 ms 60 Hz budget for UI and raster jank indicators. It reports the real build and raster timings from Flutter; it does not infer or synthesize frame durations.
 
 When DevTools disconnects, the current performance session is marked stopped and its displayed metrics are cleared. On reconnection FlutterLens binds to the new VM Service stream and restores the tracking modes that were enabled before the connection changed.
+
+## Runtime Diagnostics Notes
+
+The **Errors** tab listens to the DevTools-managed VM Service's `Flutter.Error` extension events and debugger `PauseException` events. It shows the actual rendered framework error text (including a stack trace when Flutter includes one) and VM-provided exception descriptions; it does not fabricate stack traces or catch errors not published to these streams.
+
+The timeline is scoped to the current DevTools session and capped at 200 events to avoid unbounded memory use. It is cleared on disconnect. This is a live view, not a crash reporter or historical error store. A custom `FlutterError.onError` handler that doesn't forward errors to Flutter's normal reporting path may prevent them from appearing.
 
 ## Architecture
 
