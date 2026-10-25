@@ -4,15 +4,15 @@
 
 FlutterLens is an open-source DevTools extension focused on a fast, visual workflow for understanding running Flutter applications.
 
-> **Status:** v0.1 is in active development. FlutterLens can connect through DevTools, inspect runtime metadata, retrieve and search the real live widget tree, synchronize selection with the running app, and inspect selected-widget properties, source locations, and layout information.
+> **Status:** v0.1 is in active development. FlutterLens can connect through DevTools, inspect runtime metadata, retrieve and search the real live widget tree, synchronize selection with the running app, inspect selected-widget properties and layout, and monitor real frame, rebuild, repaint, and jank activity.
 
 ## Preview
 
-Screenshot and demo assets will be added once the inspector experience is polished. FlutterLens intentionally does not use fake widget-tree or runtime data for marketing screenshots.
+Screenshot and demo assets will be added once the inspector experience is polished. FlutterLens intentionally does not use fake widget-tree, runtime, or performance data for marketing screenshots.
 
 ## Why FlutterLens?
 
-Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspired workflow for inspecting widgets, source locations, layout information, rebuilds, and eventually reviewed AI-generated source patches.
+Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspired workflow for inspecting widgets, source locations, layout information, rebuilds, performance hotspots, and eventually reviewed AI-generated source patches.
 
 ## Current Features
 
@@ -34,6 +34,13 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - Source file, line, and column when supplied by Flutter Inspector
 - Open Source action through the VM Service tool-event navigation channel when an IDE is listening
 - Inspector object-group cleanup on refresh, selection changes, and dispose
+- Real `Flutter.Frame` build, raster, elapsed, and vsync timing
+- 60 Hz frame-budget and jank detection
+- Real `Flutter.RebuiltWidgets` activity with source-attributed rebuild counts
+- Optional `Flutter.RepaintWidgets` tracking with source-attributed repaint counts
+- Aggregated rebuild/repaint hotspots ranked by activity
+- Reconnect and hot-restart-safe performance monitoring
+- Performance and Runtime center-pane views
 - Desktop-first dark application shell
 - Showcase Flutter app
 
@@ -53,8 +60,10 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - [x] Inspector selection mode
 - [x] Bidirectional selection synchronization
 - [x] Source navigation
-- [ ] Rebuild tracking
-- [ ] Performance summary
+- [x] Rebuild tracking
+- [x] Repaint tracking
+- [x] Frame performance summary
+- [x] Source-attributed performance hotspots
 - [ ] AI-assisted patches
 - [ ] Standalone CLI
 
@@ -114,6 +123,18 @@ Layout fields are shown only when Flutter exposes them for the selected diagnost
 The Open Source action posts the standard VM Service `ToolEvent` navigation event. If the connected IDE is listening for that event, it can open the selected file at the reported line and column; otherwise the action is a no-op.
 
 For the current MVP, direct Inspector queries are disabled while the main isolate is paused at a breakpoint. DevTools itself can fall back to evaluation-based Inspector calls in this case; FlutterLens will add an equivalent fallback only if it can be done cleanly without coupling the UI to DevTools internals.
+
+## Performance Notes
+
+FlutterLens consumes Flutter's existing Extension stream rather than estimating performance data. Frame timing comes from `Flutter.Frame`; rebuild and repaint activity comes from `Flutter.RebuiltWidgets` and `Flutter.RepaintWidgets`.
+
+Rebuild instrumentation uses `ext.flutter.inspector.trackRebuildDirtyWidgets` and is enabled when the live performance session starts. Repaint instrumentation uses `ext.flutter.inspector.trackRepaintWidgets` and remains opt-in because paint profiling adds additional runtime instrumentation.
+
+FlutterLens resolves event location ids through the Inspector's `widgetLocationIdMap` data and aggregates counts by widget name and source location. The location cache is cleared when the active isolate changes so hot restarts cannot attribute new activity to stale source ids.
+
+The dashboard uses a 16.7 ms 60 Hz budget for UI and raster jank indicators. It reports the real build and raster timings from Flutter; it does not infer or synthesize frame durations.
+
+When DevTools disconnects, the current performance session is marked stopped and its displayed metrics are cleared. On reconnection FlutterLens binds to the new VM Service stream and restores the tracking modes that were enabled before the connection changed.
 
 ## Architecture
 

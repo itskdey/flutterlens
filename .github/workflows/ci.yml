@@ -29,6 +29,16 @@ jobs:
         run: flutter pub get
       - name: Check
         run: bash ./tool/check.sh
+      - name: Build DevTools extension
+        working-directory: packages/flutterlens
+        run: dart run devtools_extensions build_and_copy --source=. --dest=extension/devtools
       - name: Validate DevTools extension
         working-directory: packages/flutterlens
-        run: dart run devtools_extensions validate --package=.
+        run: |
+          set -euo pipefail
+          test -f extension/devtools/build/index.html
+          dart run devtools_extensions validate --package=. 2>&1 | tee extension-validation.log
+          if grep -q 'Validation error' extension-validation.log; then
+            echo 'DevTools extension validation reported an error.'
+            exit 1
+          fi
