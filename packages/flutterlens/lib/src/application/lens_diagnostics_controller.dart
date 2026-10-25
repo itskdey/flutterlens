@@ -29,15 +29,65 @@ class LensDiagnosticsController extends ChangeNotifier {
   List<LensDiagnostic> get events =>
       List.unmodifiable(_events.toList().reversed);
 
+  LensDiagnosticKind? _kindFilter;
+
+  LensDiagnosticKind? get kindFilter => _kindFilter;
+
+  /// Each row represents the most recent occurrence of one matching issue.
   List<LensDiagnostic> get visibleEvents {
     final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return events;
-    return events
-        .where((event) =>
-            event.title.toLowerCase().contains(q) ||
-            event.details.toLowerCase().contains(q) ||
-            event.kindLabel.toLowerCase().contains(q))
-        .toList(growable: false);
+    final seen = <String>{};
+    final result = <LensDiagnostic>[];
+    for (final event in events) {
+      if (_kindFilter != null && event.kind != _kindFilter) continue;
+      if (q.isNotEmpty &&
+          !event.title.toLowerCase().contains(q) &&
+          !event.details.toLowerCase().contains(q) &&
+          !event.kindLabel.toLowerCase().contains(q) &&
+          !(event.sourceLocation?.display.toLowerCase().contains(q) ?? false)) {
+        continue;
+      }
+      if (seen.add(event.fingerprint)) result.add(event);
+    }
+    return result;
+  }
+
+  /// Counts apply to the retained session window, not lifetime totals.
+  Map<int, int> get repeatCounts {
+    final counts = <String, int>{};
+    for (final event in _events) {
+      counts.update(event.fingerprint, (value) => value + 1, ifAbsent: () => 1);
+    }
+    return {
+      for (final event in visibleEvents)
+        event.id: counts[event.fingerprint] ?? 1,
+    };
+  }
+
+  void setKindFilter(LensDiagnosticKind? kind) {
+    if (_disposed || kind == _kindFilter) return;
+    _kindFilter = kind;
+    notifyListeners();
+  }
+
+  Future<void> openSelectedSource() async {
+    final event = _selected;
+    final source = event?.sourceLocation;
+    if (_disposed ||
+        event == null ||
+        !event.canNavigateToSource ||
+        source == null) {
+      return;
+    }
+    try {
+      await _source.navigateToSource(source);
+    } catch (error, stackTrace) {
+      LensLogger.warning(
+        'Could not navigate to diagnostic source ${source.display}.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   Future<void> start() async {

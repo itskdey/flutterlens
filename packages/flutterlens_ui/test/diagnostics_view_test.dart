@@ -8,6 +8,8 @@ void main() {
       (tester) async {
     var searched = '';
     var cleared = false;
+    var opened = false;
+    LensDiagnosticKind? filter;
     LensDiagnostic? selected;
     final event = LensDiagnostic(
       id: 7,
@@ -15,6 +17,11 @@ void main() {
       timestamp: DateTime.fromMillisecondsSinceEpoch(1720000000000),
       title: 'RenderFlex overflow',
       details: 'RenderFlex overflow\n#0 main.dart:17',
+      sourceLocation: const LensSourceLocation(
+        file: '/tmp/main.dart',
+        line: 17,
+        column: 2,
+      ),
     );
 
     await tester.pumpWidget(
@@ -34,6 +41,10 @@ void main() {
               onSearch: (value) => searched = value,
               onSelect: (value) => selected = value,
               onClear: () => cleared = true,
+              repeatCounts: const {7: 3},
+              kindFilter: null,
+              onKindFilterChanged: (value) => filter = value,
+              onOpenSource: () => opened = true,
             ),
           ),
         ),
@@ -41,6 +52,15 @@ void main() {
     );
 
     expect(find.text('1 events'), findsOneWidget);
+    expect(find.text('×3'), findsOneWidget);
+    expect(find.text('/tmp/main.dart:17:2'), findsOneWidget);
+    expect(find.byTooltip('Copy incident report'), findsOneWidget);
+    await tester.tap(find.text('Open source'));
+    expect(opened, isTrue);
+    await tester.tap(find.byTooltip('Filter error type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paused exceptions').last);
+    expect(filter, LensDiagnosticKind.pausedException);
     expect(find.text('RenderFlex overflow'), findsOneWidget);
     expect(find.textContaining('#0 main.dart:17'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'overflow');

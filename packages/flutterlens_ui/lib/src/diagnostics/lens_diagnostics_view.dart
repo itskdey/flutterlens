@@ -15,6 +15,10 @@ class LensDiagnosticsView extends StatelessWidget {
     required this.onSearch,
     required this.onSelect,
     required this.onClear,
+    this.repeatCounts = const {},
+    this.kindFilter,
+    this.onKindFilterChanged,
+    this.onOpenSource,
     this.error,
     super.key,
   });
@@ -28,6 +32,10 @@ class LensDiagnosticsView extends StatelessWidget {
   final ValueChanged<String> onSearch;
   final ValueChanged<LensDiagnostic> onSelect;
   final VoidCallback onClear;
+  final Map<int, int> repeatCounts;
+  final LensDiagnosticKind? kindFilter;
+  final ValueChanged<LensDiagnosticKind?>? onKindFilterChanged;
+  final VoidCallback? onOpenSource;
   final LensError? error;
 
   @override
@@ -53,6 +61,27 @@ class LensDiagnosticsView extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              if (onKindFilterChanged != null)
+                PopupMenuButton<LensDiagnosticKind?>(
+                  tooltip: 'Filter error type',
+                  initialValue: kindFilter,
+                  onSelected: onKindFilterChanged,
+                  itemBuilder: (_) => const [
+                    PopupMenuItem<LensDiagnosticKind?>(
+                      value: null,
+                      child: Text('All errors'),
+                    ),
+                    PopupMenuItem<LensDiagnosticKind?>(
+                      value: LensDiagnosticKind.frameworkError,
+                      child: Text('Flutter errors'),
+                    ),
+                    PopupMenuItem<LensDiagnosticKind?>(
+                      value: LensDiagnosticKind.pausedException,
+                      child: Text('Paused exceptions'),
+                    ),
+                  ],
+                  icon: const Icon(Icons.filter_list_rounded, size: 16),
+                ),
               TextButton.icon(
                 onPressed: totalEvents == 0 ? null : onClear,
                 icon: const Icon(Icons.delete_sweep_outlined, size: 14),
@@ -132,7 +161,7 @@ class LensDiagnosticsView extends StatelessWidget {
                   itemCount: events.length,
                   itemBuilder: (context, index) {
                     final event = events[index];
-                    final active = selected?.id == event.id;
+                    final active = selected?.fingerprint == event.fingerprint;
                     return InkWell(
                       key: ValueKey('diagnostic-${event.id}'),
                       onTap: () => onSelect(event),
@@ -177,6 +206,17 @@ class LensDiagnosticsView extends StatelessWidget {
                                 ],
                               ),
                             ),
+                            if ((repeatCounts[event.id] ?? 1) > 1) ...[
+                              const SizedBox(width: 5),
+                              Text(
+                                '×${repeatCounts[event.id]}',
+                                style: const TextStyle(
+                                  color: LensColors.warning,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -216,6 +256,14 @@ class LensDiagnosticsView extends StatelessWidget {
                             ),
                           ),
                           IconButton(
+                            tooltip: 'Copy incident report',
+                            icon: const Icon(Icons.description_outlined,
+                                size: 15),
+                            onPressed: () => Clipboard.setData(
+                              ClipboardData(text: selected!.report),
+                            ),
+                          ),
+                          IconButton(
                             tooltip: 'Copy error details',
                             icon: const Icon(Icons.copy_rounded, size: 15),
                             onPressed: () => Clipboard.setData(
@@ -225,6 +273,33 @@ class LensDiagnosticsView extends StatelessWidget {
                         ],
                       ),
                     ),
+                    if (selected!.sourceLocation != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.code_rounded,
+                                size: 13, color: LensColors.accent),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                selected!.sourceLocation!.display,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: LensColors.textSecondary,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                            if (selected!.canNavigateToSource &&
+                                onOpenSource != null)
+                              TextButton(
+                                onPressed: onOpenSource,
+                                child: const Text('Open source'),
+                              ),
+                          ],
+                        ),
+                      ),
                     Expanded(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(12, 4, 12, 18),
