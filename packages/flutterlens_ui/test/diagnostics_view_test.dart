@@ -17,6 +17,11 @@ void main() {
       timestamp: DateTime.fromMillisecondsSinceEpoch(1720000000000),
       title: 'RenderFlex overflow',
       details: 'RenderFlex overflow\n#0 main.dart:17',
+      sourceLocation: const LensSourceLocation(
+        file: '/tmp/main.dart',
+        line: 17,
+        column: 2,
+      ),
     );
 
     await tester.pumpWidget(
