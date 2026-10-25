@@ -58,7 +58,7 @@ void main() {
     expect(find.text('4.8%'), findsOneWidget);
     expect(find.text('Frame 42'), findsOneWidget);
     expect(find.text('CounterCard'), findsOneWidget);
-    expect(find.text('counter_card.dart:24'), findsOneWidget);
+    expect(find.text('lib/counter_card.dart:24'), findsOneWidget);
 
     await tester.tap(find.text('Repaints'));
     expect(repaintEnabled, isTrue);
