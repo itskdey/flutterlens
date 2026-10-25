@@ -2,14 +2,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-trap 'echo "=== EXACT DART FORMAT DIFF ==="; git -C "$ROOT" diff -- packages examples' EXIT
 
 check_dart_package() {
   local package="$1"
   echo "==> $package"
   (
     cd "$ROOT/$package"
-    dart format .
+    dart format --output=none --set-exit-if-changed .
     dart analyze
     dart test
   )
@@ -20,7 +19,7 @@ check_flutter_package() {
   echo "==> $package"
   (
     cd "$ROOT/$package"
-    dart format .
+    dart format --output=none --set-exit-if-changed .
     flutter analyze
     flutter test
   )
