@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dds_service_extensions/dds_service_extensions.dart';
 import 'package:devtools_extensions/devtools_extensions.dart';
 import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:vm_service/vm_service.dart';
