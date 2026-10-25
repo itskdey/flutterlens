@@ -26,7 +26,8 @@ class LensDiagnosticsController extends ChangeNotifier {
   int get totalEvents => _events.length;
   LensDiagnostic? get selected => _selected;
   String get query => _query;
-  List<LensDiagnostic> get events => List.unmodifiable(_events.toList().reversed);
+  List<LensDiagnostic> get events =>
+      List.unmodifiable(_events.toList().reversed);
 
   List<LensDiagnostic> get visibleEvents {
     final q = _query.trim().toLowerCase();
