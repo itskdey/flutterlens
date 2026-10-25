@@ -103,6 +103,35 @@ class DevToolsDiagnosticsSource implements LensDiagnosticsSource {
   }
 
   @override
+  Future<void> navigateToSource(LensSourceLocation source) async {
+    if (_disposed) throw StateError('Diagnostics source has been disposed.');
+    final path = source.file;
+    final uri = path.startsWith('file:')
+        ? Uri.tryParse(path)
+        : path.startsWith('/')
+            ? Uri.file(path)
+            : RegExp(r'^[A-Za-z]:[\\/]').hasMatch(path)
+                ? Uri.file(path, windows: true)
+                : null;
+    if (uri == null || uri.scheme != 'file') {
+      throw StateError('Cannot navigate to a non-local Dart source.');
+    }
+    final service = await serviceManager.onServiceAvailable
+        .timeout(const Duration(seconds: 3));
+    try {
+      await service.postEvent('ToolEvent', 'navigate', <String, Object>{
+        'fileUri': uri.toString(),
+        'line': source.line ?? 1,
+        'column': source.column ?? 1,
+        'source': 'FlutterLens.diagnostics',
+      });
+    } on RPCError catch (error) {
+      if (error.code == RPCErrorKind.kCustomStreamDoesNotExist.code) return;
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
