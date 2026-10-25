@@ -295,6 +295,10 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       onSearch: _diagnostics.setQuery,
       onSelect: _diagnostics.select,
       onClear: _diagnostics.clear,
+      repeatCounts: _diagnostics.repeatCounts,
+      kindFilter: _diagnostics.kindFilter,
+      onKindFilterChanged: _diagnostics.setKindFilter,
+      onOpenSource: () => unawaited(_diagnostics.openSelectedSource()),
       error: _diagnostics.error,
     );
   }
