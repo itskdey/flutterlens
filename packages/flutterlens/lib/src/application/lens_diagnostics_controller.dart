@@ -56,8 +56,7 @@ class LensDiagnosticsController extends ChangeNotifier {
   Map<int, int> get repeatCounts {
     final counts = <String, int>{};
     for (final event in _events) {
-      counts.update(event.fingerprint, (value) => value + 1,
-          ifAbsent: () => 1);
+      counts.update(event.fingerprint, (value) => value + 1, ifAbsent: () => 1);
     }
     return {
       for (final event in visibleEvents)
