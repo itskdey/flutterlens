@@ -5,11 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutterlens_core/flutterlens_core.dart';
 
 class LensDiagnosticsController extends ChangeNotifier {
-  LensDiagnosticsController(this._source);
+  LensDiagnosticsController(
+    this._source, {
+    LensDebugControlSource? debugControls,
+  }) : _debugControls = debugControls;
 
   static const maxEvents = 200;
 
   final LensDiagnosticsSource _source;
+  final LensDebugControlSource? _debugControls;
   final Queue<LensDiagnostic> _events = Queue<LensDiagnostic>();
 
   StreamSubscription<LensDiagnostic>? _subscription;
@@ -19,6 +23,10 @@ class LensDiagnosticsController extends ChangeNotifier {
   bool _started = false;
   bool _starting = false;
   bool _disposed = false;
+  LensExceptionPauseMode? _exceptionPauseMode;
+  LensError? _pauseModeError;
+  bool _changingPauseMode = false;
+  int _pauseModeRequest = 0;
 
   bool get isStarted => _started;
   bool get isStarting => _starting;
@@ -26,6 +34,9 @@ class LensDiagnosticsController extends ChangeNotifier {
   int get totalEvents => _events.length;
   LensDiagnostic? get selected => _selected;
   String get query => _query;
+  LensExceptionPauseMode? get exceptionPauseMode => _exceptionPauseMode;
+  LensError? get pauseModeError => _pauseModeError;
+  bool get changingPauseMode => _changingPauseMode;
   List<LensDiagnostic> get events =>
       List.unmodifiable(_events.toList().reversed);
 
@@ -68,6 +79,67 @@ class LensDiagnosticsController extends ChangeNotifier {
     if (_disposed || kind == _kindFilter) return;
     _kindFilter = kind;
     notifyListeners();
+  }
+
+  Future<void> refreshExceptionPauseMode() async {
+    final controls = _debugControls;
+    if (_disposed || controls == null || _changingPauseMode) return;
+    final request = ++_pauseModeRequest;
+    _pauseModeError = null;
+    try {
+      final mode = await controls.readExceptionPauseMode();
+      if (_disposed || request != _pauseModeRequest) return;
+      _exceptionPauseMode = mode;
+    } catch (error, stackTrace) {
+      if (_disposed || request != _pauseModeRequest) return;
+      _exceptionPauseMode = null;
+      _pauseModeError = LensError(
+        code: 'exception_pause_mode_unavailable',
+        message: 'Could not read the debugger exception pause setting.',
+        cause: error,
+      );
+      LensLogger.warning(
+        'Could not read exception pause mode.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      if (!_disposed && request == _pauseModeRequest) notifyListeners();
+    }
+  }
+
+  Future<void> setExceptionPauseMode(LensExceptionPauseMode mode) async {
+    final controls = _debugControls;
+    if (_disposed || !_started || _changingPauseMode || controls == null) {
+      return;
+    }
+    final request = ++_pauseModeRequest;
+    _changingPauseMode = true;
+    _pauseModeError = null;
+    notifyListeners();
+    try {
+      await controls.setExceptionPauseMode(mode);
+      if (!_disposed && request == _pauseModeRequest) {
+        _exceptionPauseMode = mode;
+      }
+    } catch (error, stackTrace) {
+      if (_disposed || request != _pauseModeRequest) return;
+      _pauseModeError = LensError(
+        code: 'exception_pause_mode_failed',
+        message: 'Could not update the debugger exception pause setting.',
+        cause: error,
+      );
+      LensLogger.warning(
+        'Could not set exception pause mode.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      if (!_disposed && request == _pauseModeRequest) {
+        _changingPauseMode = false;
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> openSelectedSource() async {
@@ -115,7 +187,11 @@ class LensDiagnosticsController extends ChangeNotifier {
     );
     try {
       await _source.start();
-      if (!_disposed) _started = true;
+      if (!_disposed) {
+        _started = true;
+        // Inspector capture must keep working even if debugger RPCs fail.
+        unawaited(refreshExceptionPauseMode());
+      }
     } catch (error, stackTrace) {
       if (_disposed) return;
       _started = false;
@@ -170,6 +246,10 @@ class LensDiagnosticsController extends ChangeNotifier {
 
   void markDisconnected() {
     if (_disposed) return;
+    ++_pauseModeRequest;
+    _exceptionPauseMode = null;
+    _pauseModeError = null;
+    _changingPauseMode = false;
     _started = false;
     clear();
   }
@@ -177,6 +257,7 @@ class LensDiagnosticsController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    ++_pauseModeRequest;
     unawaited(_subscription?.cancel());
     unawaited(_source.dispose());
     super.dispose();

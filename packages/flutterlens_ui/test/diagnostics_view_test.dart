@@ -4,11 +4,13 @@ import 'package:flutterlens_core/flutterlens_core.dart';
 import 'package:flutterlens_ui/flutterlens_ui.dart';
 
 void main() {
-  testWidgets('renders errors, selects events, and reports search and clear',
-      (tester) async {
+  testWidgets('renders errors, selects events, and reports search and clear', (
+    tester,
+  ) async {
     var searched = '';
     var cleared = false;
     var opened = false;
+    LensExceptionPauseMode? changedPauseMode;
     LensDiagnosticKind? filter;
     LensDiagnostic? selected;
     final event = LensDiagnostic(
@@ -45,6 +47,8 @@ void main() {
               kindFilter: null,
               onKindFilterChanged: (value) => filter = value,
               onOpenSource: () => opened = true,
+              exceptionPauseMode: LensExceptionPauseMode.unhandled,
+              onExceptionPauseModeChanged: (value) => changedPauseMode = value,
             ),
           ),
         ),
@@ -55,6 +59,11 @@ void main() {
     expect(find.text('×3'), findsOneWidget);
     expect(find.text('/tmp/main.dart:17:2'), findsOneWidget);
     expect(find.byTooltip('Copy incident report'), findsOneWidget);
+    await tester.tap(find.byTooltip('Exception pauses: Pause on unhandled'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pause on all').last);
+    await tester.pumpAndSettle();
+    expect(changedPauseMode, LensExceptionPauseMode.all);
     await tester.tap(find.text('Open source'));
     expect(opened, isTrue);
     await tester.tap(find.byTooltip('Filter error type'));

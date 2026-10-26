@@ -7,7 +7,8 @@ import 'package:vm_service/vm_service.dart';
 
 import 'diagnostics_event_mapper.dart';
 
-class DevToolsDiagnosticsSource implements LensDiagnosticsSource {
+class DevToolsDiagnosticsSource
+    implements LensDiagnosticsSource, LensDebugControlSource {
   DevToolsDiagnosticsSource({DiagnosticsEventMapper? mapper})
       : _mapper = mapper ?? const DiagnosticsEventMapper();
 
@@ -30,8 +31,9 @@ class DevToolsDiagnosticsSource implements LensDiagnosticsSource {
     if (!serviceManager.connectedState.value.connected) {
       throw StateError('No VM Service connection is active.');
     }
-    final service = await serviceManager.onServiceAvailable
-        .timeout(const Duration(seconds: 3));
+    final service = await serviceManager.onServiceAvailable.timeout(
+      const Duration(seconds: 3),
+    );
     if (identical(service, _boundService) &&
         _extensionSubscription != null &&
         _debugSubscription != null) {
@@ -103,6 +105,37 @@ class DevToolsDiagnosticsSource implements LensDiagnosticsSource {
     );
   }
 
+  Future<(VmService, String)> _activeDebugger() async {
+    if (_disposed) throw StateError('Diagnostics source has been disposed.');
+    if (!serviceManager.connectedState.value.connected) {
+      throw StateError('No VM Service connection is active.');
+    }
+    final service = await serviceManager.onServiceAvailable.timeout(
+      const Duration(seconds: 3),
+    );
+    final isolateId = serviceManager.isolateManager.mainIsolate.value?.id;
+    if (isolateId == null) {
+      throw StateError('No active Flutter isolate is available.');
+    }
+    return (service, isolateId);
+  }
+
+  @override
+  Future<LensExceptionPauseMode?> readExceptionPauseMode() async {
+    final (service, isolateId) = await _activeDebugger();
+    final isolate = await service.getIsolate(isolateId);
+    return LensExceptionPauseMode.fromVmValue(isolate.exceptionPauseMode);
+  }
+
+  @override
+  Future<void> setExceptionPauseMode(LensExceptionPauseMode mode) async {
+    final (service, isolateId) = await _activeDebugger();
+    await service.setIsolatePauseMode(
+      isolateId,
+      exceptionPauseMode: mode.vmValue,
+    );
+  }
+
   @override
   Future<void> navigateToSource(LensSourceLocation source) async {
     if (_disposed) throw StateError('Diagnostics source has been disposed.');
@@ -117,8 +150,9 @@ class DevToolsDiagnosticsSource implements LensDiagnosticsSource {
     if (uri == null || uri.scheme != 'file') {
       throw StateError('Cannot navigate to a non-local Dart source.');
     }
-    final service = await serviceManager.onServiceAvailable
-        .timeout(const Duration(seconds: 3));
+    final service = await serviceManager.onServiceAvailable.timeout(
+      const Duration(seconds: 3),
+    );
     try {
       await service.postEvent('ToolEvent', 'navigate', <String, Object>{
         'fileUri': uri.toString(),

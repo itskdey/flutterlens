@@ -5,6 +5,67 @@ import 'package:flutterlens/src/application/lens_diagnostics_controller.dart';
 import 'package:flutterlens_core/flutterlens_core.dart';
 
 void main() {
+  test('reads and changes actual debugger pause mode', () async {
+    final source = _FakeDiagnosticsSource();
+    final controls = _FakeDebugControls();
+    final controller = LensDiagnosticsController(
+      source,
+      debugControls: controls,
+    );
+    await controller.start();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.exceptionPauseMode, LensExceptionPauseMode.unhandled);
+    await controller.setExceptionPauseMode(LensExceptionPauseMode.all);
+    expect(controls.mode, LensExceptionPauseMode.all);
+    expect(controller.exceptionPauseMode, LensExceptionPauseMode.all);
+    expect(controller.pauseModeError, isNull);
+
+    controller.markDisconnected();
+    expect(controller.exceptionPauseMode, isNull);
+    await controller.start();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.exceptionPauseMode, LensExceptionPauseMode.all);
+    controller.dispose();
+  });
+
+  test('debugger RPC failure leaves capture and prior mode intact', () async {
+    final source = _FakeDiagnosticsSource();
+    final controls = _FakeDebugControls();
+    final controller = LensDiagnosticsController(
+      source,
+      debugControls: controls,
+    );
+    await controller.start();
+    await Future<void>.delayed(Duration.zero);
+
+    controls.failOnSet = true;
+    await controller.setExceptionPauseMode(LensExceptionPauseMode.none);
+    expect(controller.isStarted, isTrue);
+    expect(controller.exceptionPauseMode, LensExceptionPauseMode.unhandled);
+    expect(controller.pauseModeError?.code, 'exception_pause_mode_failed');
+    source.emit(_event(1, 'Error after failed RPC'));
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.totalEvents, 1);
+    controller.dispose();
+  });
+
+  test('late debugger read cannot revive mode after disconnect', () async {
+    final source = _FakeDiagnosticsSource();
+    final controls = _FakeDebugControls();
+    controls.pendingRead = Completer<LensExceptionPauseMode?>();
+    final controller = LensDiagnosticsController(
+      source,
+      debugControls: controls,
+    );
+    await controller.start();
+    controller.markDisconnected();
+    controls.pendingRead!.complete(LensExceptionPauseMode.all);
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.exceptionPauseMode, isNull);
+    controller.dispose();
+  });
+
   test('records, filters, selects, and clears real events', () async {
     final source = _FakeDiagnosticsSource();
     final controller = LensDiagnosticsController(source);
@@ -71,18 +132,20 @@ void main() {
     final source = _FakeDiagnosticsSource();
     final controller = LensDiagnosticsController(source);
     await controller.start();
-    source.emit(LensDiagnostic(
-      id: 10,
-      kind: LensDiagnosticKind.frameworkError,
-      timestamp: DateTime.fromMillisecondsSinceEpoch(1720000000000),
-      title: 'Failed',
-      details: 'Failed at /tmp/lib/main.dart:10:2',
-      sourceLocation: const LensSourceLocation(
-        file: '/tmp/lib/main.dart',
-        line: 10,
-        column: 2,
+    source.emit(
+      LensDiagnostic(
+        id: 10,
+        kind: LensDiagnosticKind.frameworkError,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1720000000000),
+        title: 'Failed',
+        details: 'Failed at /tmp/lib/main.dart:10:2',
+        sourceLocation: const LensSourceLocation(
+          file: '/tmp/lib/main.dart',
+          line: 10,
+          column: 2,
+        ),
       ),
-    ));
+    );
     await Future<void>.delayed(Duration.zero);
 
     await controller.openSelectedSource();
@@ -123,4 +186,20 @@ class _FakeDiagnosticsSource implements LensDiagnosticsSource {
 
   @override
   Future<void> dispose() => _controller.close();
+}
+
+class _FakeDebugControls implements LensDebugControlSource {
+  LensExceptionPauseMode mode = LensExceptionPauseMode.unhandled;
+  bool failOnSet = false;
+  Completer<LensExceptionPauseMode?>? pendingRead;
+
+  @override
+  Future<LensExceptionPauseMode?> readExceptionPauseMode() async =>
+      pendingRead == null ? mode : pendingRead!.future;
+
+  @override
+  Future<void> setExceptionPauseMode(LensExceptionPauseMode value) async {
+    if (failOnSet) throw StateError('Debugger denied the request.');
+    mode = value;
+  }
 }

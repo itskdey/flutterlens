@@ -47,8 +47,10 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - Debugging triage: grouped repeating failures with occurrence counts and kind filters
 - Stack-frame source locations when provided by Flutter; local file navigation through VM ToolEvent
 - Copyable diagnostic incident reports with timestamp, type, isolate and raw details
+- Live debugger exception-pause mode (ignore, unhandled, all), read from and written to the active isolate on explicit request
 - Diagnostics subscription rebinding after connection changes; session reset on disconnect
 - Desktop-first dark application shell
+- Responsive single-pane navigation for narrower DevTools windows; no hidden Performance, Runtime, or Errors panes
 - Showcase Flutter app
 
 ## Roadmap
@@ -73,6 +75,7 @@ Flutter DevTools is powerful. FlutterLens explores a denser, design-tool-inspire
 - [x] Source-attributed performance hotspots
 - [x] Runtime diagnostics timeline and exception details
 - [x] Repeated-error grouping, triage filters, source navigation and report copying
+- [x] Active-isolate exception pause controls and narrow-window navigation
 - [ ] AI-assisted patches
 - [ ] Standalone CLI
 
@@ -150,6 +153,12 @@ When DevTools disconnects, the current performance session is marked stopped and
 The **Errors** tab listens to the DevTools-managed VM Service's `Flutter.Error` extension events and debugger `PauseException` events. It shows the actual rendered framework error text (including a stack trace when Flutter includes one) and VM-provided exception descriptions; it does not fabricate stack traces or catch errors not published to these streams.
 
 The timeline is scoped to the current DevTools session and capped at 200 events to avoid unbounded memory use. Phase 8 groups repeated issues by event type, title, and available source location while retaining original raw events. Occurrence counts describe the retained window, not historical totals. File navigation is shown only for local file URIs or absolute paths; `package:` paths are displayed but are not claimed to be navigable without source resolution. It is cleared on disconnect. This is a live view, not a crash reporter or historical error store. A custom `FlutterError.onError` handler that doesn't forward errors to Flutter's normal reporting path may prevent them from appearing.
+
+Phase 9 adds an **Exception pauses** menu in the Errors pane. It reflects the main isolate's actual VM setting (`None`, `Unhandled`, or `All`) and changes that setting only when a developer chooses another mode. This affects the connected debugger and may cause the application to pause more frequently. FlutterLens never resumes a paused application automatically. The menu is disabled if the setting cannot be read; errors in this control do not stop the error timeline. Use Refresh after a hot restart to read the active isolate's setting again.
+
+On smaller DevTools windows the shell switches to **Tree / Workspace / Inspector** tabs, so Performance, Runtime, and Errors stay accessible through Workspace. The three-column layout returns in wide windows.
+
+For first-preview manual verification, see [Preview QA](docs/preview-qa.md).
 
 ## Architecture
 

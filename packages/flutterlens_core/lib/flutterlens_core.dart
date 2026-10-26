@@ -2,6 +2,7 @@ library;
 
 export 'src/connection/lens_connection_source.dart';
 export 'src/connection/lens_runtime_probe.dart';
+export 'src/diagnostics/lens_debug_control_source.dart';
 export 'src/diagnostics/lens_diagnostics_source.dart';
 export 'src/inspector/lens_widget_inspector_source.dart';
 export 'src/inspector/lens_widget_tree_source.dart';
@@ -12,6 +13,7 @@ export 'src/models/lens_connection_snapshot.dart';
 export 'src/models/lens_connection_status.dart';
 export 'src/models/lens_diagnostic.dart';
 export 'src/models/lens_error.dart';
+export 'src/models/lens_exception_pause_mode.dart';
 export 'src/models/lens_frame_metric.dart';
 export 'src/models/lens_layout_info.dart';
 export 'src/models/lens_performance_hotspot.dart';
