@@ -42,11 +42,13 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       DevToolsRuntimeProbe(),
     );
     _tree = LensWidgetTreeController(DevToolsWidgetTreeSource());
-    _inspector = LensWidgetInspectorController(
-      DevToolsWidgetInspectorSource(),
-    );
+    _inspector = LensWidgetInspectorController(DevToolsWidgetInspectorSource());
     _performance = LensPerformanceController(DevToolsPerformanceSource());
-    _diagnostics = LensDiagnosticsController(DevToolsDiagnosticsSource());
+    final diagnosticsSource = DevToolsDiagnosticsSource();
+    _diagnostics = LensDiagnosticsController(
+      diagnosticsSource,
+      debugControls: diagnosticsSource,
+    );
     _workspace = Listenable.merge([
       _connection,
       _tree,
@@ -299,6 +301,11 @@ class _FlutterLensAppState extends State<FlutterLensApp> {
       kindFilter: _diagnostics.kindFilter,
       onKindFilterChanged: _diagnostics.setKindFilter,
       onOpenSource: () => unawaited(_diagnostics.openSelectedSource()),
+      exceptionPauseMode: _diagnostics.exceptionPauseMode,
+      changingPauseMode: _diagnostics.changingPauseMode,
+      pauseModeError: _diagnostics.pauseModeError,
+      onExceptionPauseModeChanged: (mode) =>
+          unawaited(_diagnostics.setExceptionPauseMode(mode)),
       error: _diagnostics.error,
     );
   }

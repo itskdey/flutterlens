@@ -19,6 +19,10 @@ class LensDiagnosticsView extends StatelessWidget {
     this.kindFilter,
     this.onKindFilterChanged,
     this.onOpenSource,
+    this.exceptionPauseMode,
+    this.changingPauseMode = false,
+    this.pauseModeError,
+    this.onExceptionPauseModeChanged,
     this.error,
     super.key,
   });
@@ -36,6 +40,10 @@ class LensDiagnosticsView extends StatelessWidget {
   final LensDiagnosticKind? kindFilter;
   final ValueChanged<LensDiagnosticKind?>? onKindFilterChanged;
   final VoidCallback? onOpenSource;
+  final LensExceptionPauseMode? exceptionPauseMode;
+  final bool changingPauseMode;
+  final LensError? pauseModeError;
+  final ValueChanged<LensExceptionPauseMode>? onExceptionPauseModeChanged;
   final LensError? error;
 
   @override
@@ -49,8 +57,11 @@ class LensDiagnosticsView extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           child: Row(
             children: [
-              const Icon(Icons.bug_report_outlined,
-                  color: LensColors.error, size: 15),
+              const Icon(
+                Icons.bug_report_outlined,
+                color: LensColors.error,
+                size: 15,
+              ),
               const SizedBox(width: 6),
               Text(
                 '$totalEvents events',
@@ -61,6 +72,30 @@ class LensDiagnosticsView extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              PopupMenuButton<LensExceptionPauseMode>(
+                tooltip: exceptionPauseMode == null
+                    ? 'Debugger pause mode unavailable'
+                    : 'Exception pauses: ${exceptionPauseMode!.label}',
+                enabled: started &&
+                    !changingPauseMode &&
+                    exceptionPauseMode != null &&
+                    onExceptionPauseModeChanged != null,
+                initialValue: exceptionPauseMode,
+                onSelected: onExceptionPauseModeChanged,
+                itemBuilder: (_) => [
+                  for (final mode in LensExceptionPauseMode.values)
+                    PopupMenuItem<LensExceptionPauseMode>(
+                      value: mode,
+                      child: Text(mode.label),
+                    ),
+                ],
+                icon: changingPauseMode
+                    ? const SizedBox.square(
+                        dimension: 13,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      )
+                    : const Icon(Icons.pause_circle_outline_rounded, size: 16),
+              ),
               if (onKindFilterChanged != null)
                 PopupMenuButton<LensDiagnosticKind?>(
                   tooltip: 'Filter error type',
@@ -128,6 +163,14 @@ class LensDiagnosticsView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
               error!.message,
+              style: const TextStyle(color: LensColors.error, fontSize: 11),
+            ),
+          ),
+        if (pauseModeError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              pauseModeError!.message,
               style: const TextStyle(color: LensColors.error, fontSize: 11),
             ),
           ),
@@ -231,10 +274,7 @@ class LensDiagnosticsView extends StatelessWidget {
               ? const Center(
                   child: Text(
                     'Select an event to inspect its details.',
-                    style: TextStyle(
-                      color: LensColors.textMuted,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: LensColors.textMuted, fontSize: 11),
                   ),
                 )
               : Column(
@@ -257,8 +297,10 @@ class LensDiagnosticsView extends StatelessWidget {
                           ),
                           IconButton(
                             tooltip: 'Copy incident report',
-                            icon: const Icon(Icons.description_outlined,
-                                size: 15),
+                            icon: const Icon(
+                              Icons.description_outlined,
+                              size: 15,
+                            ),
                             onPressed: () => Clipboard.setData(
                               ClipboardData(text: selected!.report),
                             ),
@@ -278,8 +320,11 @@ class LensDiagnosticsView extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Row(
                           children: [
-                            const Icon(Icons.code_rounded,
-                                size: 13, color: LensColors.accent),
+                            const Icon(
+                              Icons.code_rounded,
+                              size: 13,
+                              color: LensColors.accent,
+                            ),
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
