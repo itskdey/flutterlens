@@ -224,8 +224,7 @@ class DevToolsWidgetTreeSource extends LensWidgetTreeSource {
   }
 
   Future<void> _ensureDebugSubscription(VmService service) async {
-    if (identical(_boundDebugService, service) &&
-        _debugSubscription != null) {
+    if (identical(_boundDebugService, service) && _debugSubscription != null) {
       return;
     }
 
