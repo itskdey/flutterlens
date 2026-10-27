@@ -59,8 +59,10 @@ class _ShowcaseQaControlsState extends State<ShowcaseQaControls>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Live inspector QA',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Live inspector QA',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 4),
             Text(
               'Opt-in rebuild, layout, repaint and diagnostic events.',
