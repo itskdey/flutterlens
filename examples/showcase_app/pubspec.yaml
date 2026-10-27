@@ -14,10 +14,8 @@ flutter:
 dependencies:
   flutter:
     sdk: flutter
-  flutterlens:
-    version: ^0.1.0-dev.1
-
 dev_dependencies:
+  flutterlens: ^0.1.0-dev.1
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
