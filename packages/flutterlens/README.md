@@ -4,6 +4,8 @@ A visual Flutter DevTools extension for inspecting a running debug-mode Flutter 
 
 This package provides the `flutterlens` DevTools extension. It relies on DevTools' existing VM Service connection rather than opening its own.
 
+You can also import `package:flutterlens/flutterlens.dart` for the shared core models and reusable UI widgets.
+
 ## Installation (once published)
 
 Add `flutterlens` to your application's `dev_dependencies` using the published version, run `flutter pub get`, and start your app in debug mode. Open DevTools and enable FlutterLens in the Extensions dialog when prompted.
