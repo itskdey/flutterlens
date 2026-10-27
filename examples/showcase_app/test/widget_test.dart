@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterlens_showcase_app/main.dart';
+import 'package:flutterlens_showcase_app/qa_controls.dart';
+
+Future<void> pumpQaControls(WidgetTester tester) async {
+  await tester.pumpWidget(
+    const MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(child: ShowcaseQaControls()),
+      ),
+    ),
+  );
+}
 
 void main() {
   testWidgets('renders the real-app QA fixtures', (tester) async {
@@ -12,22 +23,18 @@ void main() {
   });
 
   testWidgets('rebuild action changes inspectable state', (tester) async {
-    await tester.pumpWidget(const ShowcaseApp());
+    await pumpQaControls(tester);
 
-    final rebuild = find.byKey(const Key('qa_rebuild_button'));
-    await tester.ensureVisible(rebuild);
-    await tester.tap(rebuild);
+    await tester.tap(find.byKey(const Key('qa_rebuild_button')));
     await tester.pump();
 
     expect(find.text('Rebuild count: 1'), findsOneWidget);
   });
 
   testWidgets('layout action changes the sample dimensions', (tester) async {
-    await tester.pumpWidget(const ShowcaseApp());
+    await pumpQaControls(tester);
 
-    final toggle = find.byKey(const Key('qa_layout_switch'));
-    await tester.ensureVisible(toggle);
-    await tester.tap(toggle);
+    await tester.tap(find.byKey(const Key('qa_layout_switch')));
     await tester.pumpAndSettle();
 
     expect(find.text('Compact'), findsOneWidget);
@@ -36,16 +43,14 @@ void main() {
   testWidgets(
     'framework error action emits an expected report',
     (tester) async {
+      await pumpQaControls(tester);
+
       final previousHandler = FlutterError.onError;
       final errors = <FlutterErrorDetails>[];
       FlutterError.onError = errors.add;
       addTearDown(() => FlutterError.onError = previousHandler);
 
-      await tester.pumpWidget(const ShowcaseApp());
-
-      final trigger = find.byKey(const Key('qa_framework_error_button'));
-      await tester.ensureVisible(trigger);
-      await tester.tap(trigger);
+      await tester.tap(find.byKey(const Key('qa_framework_error_button')));
       await tester.pump();
 
       expect(errors, hasLength(1));
@@ -57,11 +62,9 @@ void main() {
   );
 
   testWidgets('paint animation can complete', (tester) async {
-    await tester.pumpWidget(const ShowcaseApp());
+    await pumpQaControls(tester);
 
-    final animate = find.byKey(const Key('qa_paint_button'));
-    await tester.ensureVisible(animate);
-    await tester.tap(animate);
+    await tester.tap(find.byKey(const Key('qa_paint_button')));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
