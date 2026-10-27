@@ -33,8 +33,9 @@ void main() {
     expect(find.text('Compact'), findsOneWidget);
   });
 
-  testWidgets('framework error action emits an expected report',
-      (tester) async {
+  testWidgets(
+    'framework error action emits an expected report',
+    (tester) async {
     final previousHandler = FlutterError.onError;
     final errors = <FlutterErrorDetails>[];
     FlutterError.onError = errors.add;
@@ -48,9 +49,12 @@ void main() {
     await tester.pump();
 
     expect(errors, hasLength(1));
-    expect(errors.single.exception.toString(),
-        contains('FlutterLens QA: expected framework error'));
-  });
+    expect(
+      errors.single.exception.toString(),
+      contains('FlutterLens QA: expected framework error'),
+    );
+    },
+  );
 
   testWidgets('paint animation can complete', (tester) async {
     await tester.pumpWidget(const ShowcaseApp());
