@@ -35,6 +35,7 @@ class DevToolsWidgetTreeSource extends LensWidgetTreeSource {
   final StreamController<void> _selectionChanges =
       StreamController<void>.broadcast();
   StreamSubscription<Event>? _debugSubscription;
+  VmService? _boundDebugService;
   String _groupName;
   bool _showImplementationWidgets = false;
   bool _selectModeEnabled = false;
@@ -183,6 +184,7 @@ class DevToolsWidgetTreeSource extends LensWidgetTreeSource {
   Future<void> dispose() async {
     if (_disposed) return;
     await _debugSubscription?.cancel();
+    _boundDebugService = null;
     await _disposeCurrentGroup();
     await _selectionChanges.close();
     _disposed = true;
@@ -208,7 +210,7 @@ class DevToolsWidgetTreeSource extends LensWidgetTreeSource {
     final service = await serviceManager.onServiceAvailable.timeout(
       _serviceTimeout,
     );
-    _ensureDebugSubscription(service);
+    await _ensureDebugSubscription(service);
     final isolateId = serviceManager.isolateManager.mainIsolate.value?.id;
     if (isolateId == null) {
       throw StateError('Flutter main isolate is unavailable.');
@@ -221,9 +223,22 @@ class DevToolsWidgetTreeSource extends LensWidgetTreeSource {
     return (service: service, isolateId: isolateId);
   }
 
-  void _ensureDebugSubscription(VmService service) {
-    _debugSubscription ??= service.onDebugEvent.listen((event) {
-      if (!_disposed && event.kind == EventKind.kInspect) {
+  Future<void> _ensureDebugSubscription(VmService service) async {
+    if (identical(_boundDebugService, service) && _debugSubscription != null) {
+      return;
+    }
+
+    // DevTools can reconnect to a different VM Service without recreating
+    // this source. Keep selection events bound to the current service.
+    await _debugSubscription?.cancel();
+    _checkNotDisposed();
+    _boundDebugService = service;
+    _selectModeEnabled = false;
+    _debugSubscription = service.onDebugEvent.listen((event) {
+      if (!_disposed &&
+          identical(_boundDebugService, service) &&
+          event.kind == EventKind.kInspect &&
+          !_selectionChanges.isClosed) {
         _selectionChanges.add(null);
       }
     });

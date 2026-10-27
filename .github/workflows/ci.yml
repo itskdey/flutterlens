@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+# New commits on a PR supersede earlier validation runs.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest

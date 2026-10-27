@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'qa_controls.dart';
+
 void main() => runApp(const ShowcaseApp());
 
 class ShowcaseApp extends StatelessWidget {
@@ -36,6 +38,8 @@ class ShowcaseScreen extends StatelessWidget {
               sliver: SliverList.list(
                 children: const [
                   _SearchField(),
+                  SizedBox(height: 18),
+                  ShowcaseQaControls(),
                   SizedBox(height: 18),
                   _CategoryRow(),
                   SizedBox(height: 24),
