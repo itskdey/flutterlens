@@ -36,23 +36,23 @@ void main() {
   testWidgets(
     'framework error action emits an expected report',
     (tester) async {
-    final previousHandler = FlutterError.onError;
-    final errors = <FlutterErrorDetails>[];
-    FlutterError.onError = errors.add;
-    addTearDown(() => FlutterError.onError = previousHandler);
+      final previousHandler = FlutterError.onError;
+      final errors = <FlutterErrorDetails>[];
+      FlutterError.onError = errors.add;
+      addTearDown(() => FlutterError.onError = previousHandler);
 
-    await tester.pumpWidget(const ShowcaseApp());
+      await tester.pumpWidget(const ShowcaseApp());
 
-    final trigger = find.byKey(const Key('qa_framework_error_button'));
-    await tester.ensureVisible(trigger);
-    await tester.tap(trigger);
-    await tester.pump();
+      final trigger = find.byKey(const Key('qa_framework_error_button'));
+      await tester.ensureVisible(trigger);
+      await tester.tap(trigger);
+      await tester.pump();
 
-    expect(errors, hasLength(1));
-    expect(
-      errors.single.exception.toString(),
-      contains('FlutterLens QA: expected framework error'),
-    );
+      expect(errors, hasLength(1));
+      expect(
+        errors.single.exception.toString(),
+        contains('FlutterLens QA: expected framework error'),
+      );
     },
   );
 
