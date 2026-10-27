@@ -4,7 +4,7 @@ FlutterLens is a DevTools extension, not a standalone launcher yet. AI editing a
 
 ## Automated gates
 
-1. Run `./tool/check.sh` after fetching each package's dependencies as described in the README.
+1. Run `bash ./tool/check.sh` after resolving workspace dependencies as described in the README.
 2. Build with `dart run devtools_extensions build_and_copy --source=. --dest=extension/devtools` from `packages/flutterlens`.
 3. Validate with `dart run devtools_extensions validate --package=.`.
 4. Confirm GitHub Actions passes on the PR and on `main` after merge.

@@ -1,11 +1,14 @@
 name: flutterlens
 description: A modern visual inspector for Flutter.
 version: 0.1.0-dev.1
-publish_to: none
+repository: https://github.com/itskdey/flutterlens/tree/main/packages/flutterlens
+issue_tracker: https://github.com/itskdey/flutterlens/issues
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
   flutter: '>=3.27.1'
+
+resolution: workspace
 
 flutter:
   uses-material-design: true
@@ -17,9 +20,9 @@ dependencies:
   flutter:
     sdk: flutter
   flutterlens_core:
-    path: ../flutterlens_core
+    version: ^0.1.0-dev.1
   flutterlens_ui:
-    path: ../flutterlens_ui
+    version: ^0.1.0-dev.1
   vm_service: '>=13.0.0 <16.0.0'
 
 dev_dependencies:
