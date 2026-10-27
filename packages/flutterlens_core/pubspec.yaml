@@ -1,10 +1,13 @@
 name: flutterlens_core
 description: Core models and contracts for FlutterLens.
 version: 0.1.0-dev.1
-publish_to: none
+repository: https://github.com/itskdey/flutterlens/tree/main/packages/flutterlens_core
+issue_tracker: https://github.com/itskdey/flutterlens/issues
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
+
+resolution: workspace
 
 dev_dependencies:
   lints: ^6.0.0

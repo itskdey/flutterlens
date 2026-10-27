@@ -15,17 +15,7 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Core dependencies
-        working-directory: packages/flutterlens_core
-        run: dart pub get
-      - name: UI dependencies
-        working-directory: packages/flutterlens_ui
-        run: flutter pub get
-      - name: Extension dependencies
-        working-directory: packages/flutterlens
-        run: flutter pub get
-      - name: Showcase dependencies
-        working-directory: examples/showcase_app
+      - name: Resolve workspace dependencies
         run: flutter pub get
       - name: Check
         run: bash ./tool/check.sh
@@ -42,3 +32,5 @@ jobs:
             echo 'DevTools extension validation reported an error.'
             exit 1
           fi
+      - name: Verify publishable packages
+        run: bash ./tool/check_publish.sh

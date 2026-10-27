@@ -1,0 +1,11 @@
+name: flutterlens_workspace
+publish_to: none
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+
+workspace:
+  - packages/flutterlens_core
+  - packages/flutterlens_ui
+  - packages/flutterlens
+  - examples/showcase_app

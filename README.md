@@ -92,21 +92,18 @@ The minimum versions follow the current `devtools_extensions` package requiremen
 
 ## Getting Started
 
-Fetch dependencies for each package:
+FlutterLens uses a Dart pub workspace. Fetch dependencies from the repository root:
 
 ```bash
-cd packages/flutterlens_core && dart pub get
-cd ../flutterlens_ui && flutter pub get
-cd ../flutterlens && flutter pub get
-cd ../../examples/showcase_app && flutter pub get
+flutter pub get
 ```
 
 Build the extension into its discovery directory:
 
 ```bash
 cd packages/flutterlens
-dart run devtools_extensions validate --package=.
 dart run devtools_extensions build_and_copy --source=. --dest=extension/devtools
+dart run devtools_extensions validate --package=.
 ```
 
 Run the showcase app:
@@ -186,12 +183,20 @@ examples/
 
 The UI never owns VM Service calls. DevTools-specific APIs stay in the extension package behind FlutterLens interfaces.
 
+The workspace resolves `flutterlens_core`, `flutterlens_ui`, and `flutterlens` locally while their manifests declare hosted version constraints for future pub.dev consumers. No package has been published yet. The release order and verification gates are documented in [Publishing](docs/publishing.md).
+
 ## Development
 
 Run the repository checks with:
 
 ```bash
-./tool/check.sh
+bash ./tool/check.sh
+```
+
+Release preflight, after building the extension:
+
+```bash
+bash ./tool/check_publish.sh
 ```
 
 Or run `dart format .`, `flutter analyze`, and `flutter test` inside each Flutter package.

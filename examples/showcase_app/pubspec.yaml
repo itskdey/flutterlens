@@ -6,6 +6,8 @@ version: 0.1.0+1
 environment:
   sdk: '>=3.6.0 <4.0.0'
 
+resolution: workspace
+
 flutter:
   uses-material-design: true
 
@@ -13,7 +15,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutterlens:
-    path: ../../packages/flutterlens
+    version: ^0.1.0-dev.1
 
 dev_dependencies:
   flutter_lints: ^6.0.0

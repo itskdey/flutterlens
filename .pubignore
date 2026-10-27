@@ -1,0 +1,12 @@
+# Publishing a nested package must not inherit the root .gitignore rule that
+# hides extension/devtools/build. The compiled assets are required by DevTools.
+/.dart_tool/
+/build/
+/coverage/
+/.pub/
+/.packages
+/.flutter-plugins
+/.flutter-plugins-dependencies
+**/.idea/
+**/*.iml
+.DS_Store
